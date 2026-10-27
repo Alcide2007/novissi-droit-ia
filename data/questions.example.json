@@ -1,0 +1,8 @@
+[
+ {"q":"mon patron ne m'a pas payé mon salaire","domain":"travail","in_scope":true,"expected":[{"source_contains":"travail","article":"Article 1"}]},
+ {"q":"je veux saisir l'inspection du travail","domain":"travail","in_scope":true,"expected":[{"source_contains":"travail","article":"Article 2"}]},
+ {"q":"mon propriétaire veut m'expulser sans décision de justice","domain":"bail","in_scope":true,"expected":[{"source_contains":"bail","article":"Article 2"}]},
+ {"q":"que vérifier avant d'acheter un terrain, titre foncier et cadastre","domain":"foncier","in_scope":true,"expected":[{"source_contains":"bail","article":"Article 3"}]},
+ {"q":"recette du riz au gras","domain":"autre","in_scope":false},
+ {"q":"qui a gagné le match hier","domain":"autre","in_scope":false}
+]

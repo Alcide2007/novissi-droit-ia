@@ -1,0 +1,10 @@
+# source: EXEMPLE FICTIF - Code du travail
+# kind: loi
+# url:
+[EXEMPLE FICTIF pour tester le code. Remplacez ce fichier par les textes officiels du Journal officiel. Ne pas utiliser en démonstration publique.]
+
+Article 1. Le salaire est payé à la date prévue par le contrat de travail. Un retard de paiement peut donner lieu à une mise en demeure écrite adressée à l'employeur.
+
+Article 2. Le salarié qui n'est pas payé peut saisir l'inspection du travail de son lieu de travail afin de demander une conciliation.
+
+Article 3. Le contrat de travail à durée indéterminée ne peut être rompu qu'avec un préavis écrit dont la durée dépend de l'ancienneté du salarié.

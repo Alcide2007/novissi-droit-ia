@@ -1,0 +1,9 @@
+# source: Guide pratique du droit togolais (Travail, Bail, Acte notarié et Foncier)
+# kind: analyse
+# scope: national
+# url: https://www.lqdd.org/textes-de-loi
+# title: Fiches pratiques : salaire impayé, terrain à Agoè, acte notarié et bail
+
+Salaire impayé depuis plusieurs mois : la première étape consiste à rassembler et garder toutes les preuves de la relation de travail (contrat écrit, bulletins de paie, relevés bancaires, transferts Mobile Money/Flooz/T-Money, badges ou messages échangés avec l'employeur). Ensuite, une lettre de mise en demeure écrite envoyée avec accusé de réception ou déchargée par l'employeur fixe un délai de 8 jours pour payer l'intégralité des arriérés. Si l'employeur ne régularise pas la situation, le travailleur saisit gratuitement l'Inspection du travail et des lois sociales de son ressort territorial pour convocation et conciliation.
+
+Lecture et vérification d'un acte notarié ou d'un compromis de vente de terrain : en vertu de l'article 166 du Code foncier et domanial togolais (Loi n° 2018-005), toute transaction portant sur un terrain ou un immeuble doit être passée devant notaire. Les clauses à risque majeur à vérifier avant toute signature sont : l'absence de numéro de Titre Foncier ou de réquisition d'immatriculation vérifiable à l'OTR, le plan parcellaire non visé par la Direction du Cadastre (absence des 3 tampons réglementaires), une clause de non-garantie d'éviction exonérant le vendeur en cas de litige, le paiement du prix hors la comptabilité du notaire, ou la vente d'un terrain familial indivis sans le consentement et la signature de tous les cohéritiers.

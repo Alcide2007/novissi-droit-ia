@@ -1,0 +1,16 @@
+{
+  "id": "example-not-a-real-translation",
+  "language": "ee",
+  "language_name": "Ewé",
+  "text_original": "",
+  "translation_fr": null,
+  "translation_status": "not_verified",
+  "dialect": null,
+  "content_type": "phrase",
+  "audio_url": null,
+  "source_name": "",
+  "source_url": "",
+  "collected_at": null,
+  "reuse_permission": "unknown",
+  "human_review": "required"
+}

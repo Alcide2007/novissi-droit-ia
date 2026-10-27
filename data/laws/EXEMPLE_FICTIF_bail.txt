@@ -1,0 +1,10 @@
+# source: EXEMPLE FICTIF - Bail et foncier
+# kind: loi
+# url:
+[EXEMPLE FICTIF pour tester le code. Remplacez ce fichier par les textes officiels du Journal officiel. Ne pas utiliser en démonstration publique.]
+
+Article 1. Le bailleur qui veut mettre fin au bail d'habitation doit donner congé au locataire par écrit en respectant un préavis.
+
+Article 2. Le locataire ne peut pas être expulsé de son logement sans décision de justice, même si le bailleur a donné congé.
+
+Article 3. Avant d'acheter un terrain, l'acquéreur doit demander le titre foncier et vérifier auprès du service du cadastre qu'aucune autre vente n'est enregistrée sur la parcelle.

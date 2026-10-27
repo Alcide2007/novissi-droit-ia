@@ -1,0 +1,26 @@
+# Secrets : ne jamais envoyer sur GitHub
+.env
+.env.example
+# Pythons
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+
+# Textes récupérés automatiquement (régénérés par les collecteurs)
+data/laws/jo__*
+data/laws/lqd__*
+data/laws/otr__*
+data/laws/index.json
+
+# PDF originaux, registre SQLite et conversations (données locales)
+data/pdf/*
+!data/pdf/.gitkeep
+data/*.db
+data/registry.db
+data/conversations.db

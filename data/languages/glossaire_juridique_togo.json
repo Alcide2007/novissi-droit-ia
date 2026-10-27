@@ -1,0 +1,88 @@
+{
+  "Ewé": {
+    "description": "Lexique et formules juridiques de référence Français - Éwé (Togo)",
+    "terms": {
+      "loi / droit": "sea / dukɔa ƒe se",
+      "vos droits": "wò gomenɔamesiwo",
+      "salaire / paie": "fetu / dɔwɔfetu",
+      "patron / employeur": "dɔwɔtɔ / dɔwɔƒetɔ",
+      "travailleur / salarié": "dɔwɔla",
+      "inspection du travail": "dɔwɔnyawo kpɔƒe (Inspection du travail)",
+      "tribunal du travail": "dɔwɔnyawo ƒe ʋɔnudrɔ̃ƒe (Tribunal du travail)",
+      "mise en demeure": "nudodo ŋkume / agbalẽ sẽŋu (mise en demeure)",
+      "contrat / acte écrit": "nubabla / agbalẽ",
+      "propriétaire / bailleur": "aƒetɔ",
+      "locataire": "xɔhayatɔ",
+      "loyer": "xɔfetu",
+      "caution / garantie": "xɔhayaga si wotsɔ da ɖi (caution)",
+      "préavis": "gbeɖeɖe ɖi do ŋgɔ (préavis)",
+      "expulsion": "nyanya le xɔ me",
+      "décision de justice": "ʋɔnudrɔ̃ƒe ƒe nyametsotso",
+      "tribunal / justice": "ʋɔnudrɔ̃ƒe",
+      "terrain / parcelle": "anyigba / kɔƒe",
+      "titre foncier": "anyigbagbalẽ gã (Titre Foncier - OTR)",
+      "cadastre / OTR": "anyigbadzraɖoƒe (Cadastre / OTR)",
+      "notaire": "agbalẽŋlɔla seala (Notaire)",
+      "double vente": "anyigba dzra zi eve (double vente)",
+      "preuves": "kpeɖodziwo",
+      "conciliation": "nudzodzro le ŋutifafa me"
+    },
+    "model_sentences": [
+      "Togo ƒe dɔwɔse (Loi n° 2021-012) gblɔ be dɔwɔtɔ ɖesiaɖe ele be wòaxe fetu na dɔwɔla le ɣleti ɖesiaɖe ƒe nuwuwu [1].",
+      "Ne dɔwɔtɔwò mexe fetu na wò o la, nàte ŋu aŋlɔ agbalẽ sẽŋu (mise en demeure) ɖo ɖe egbɔ alo ayi dɔwɔnyawo kpɔƒe (Inspection du travail) [2].",
+      "Le Togo ƒe se nu la (Décret n° 2022-001/PR), aƒetɔ aɖeke mete ŋu anya xɔhayatɔ le xɔ me ne ʋɔnudrɔ̃ƒe metso nya me o [1].",
+      "Hafi nàƒle anyigba le Agoè alo Lomé la, ele be nàbia anyigbagbalẽ gã (Titre Foncier) eye nàdo गोome kpɔ le Cadastre (OTR) be womedzra anyigba ma na ame bubu xoxo o [1]."
+    ],
+    "keywords_to_fr": {
+      "fetu": "salaire impayé patron travail",
+      "dɔwɔfetu": "salaire impayé patron travail",
+      "dɔwɔtɔ": "patron employeur salaire travail",
+      "dɔwɔtɔnye": "mon patron ne m'a pas payé mon salaire",
+      "dɔwɔnyawo": "saisir l'inspection du travail",
+      "xɔhayatɔ": "locataire bail expulsion décision de justice",
+      "aƒetɔ": "propriétaire bailleur veut m'expulser sans décision de justice",
+      "nyanya": "expulsion sans décision de justice bail",
+      "anyigba": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
+      "anyigbagbalẽ": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
+      "agbalẽ": "acte notarié contrat"
+    }
+  },
+  "Kabiyè": {
+    "description": "Lexique et formules juridiques de référence Français - Kabiyè (Togo)",
+    "terms": {
+      "loi / droit": "paɣtʊ",
+      "vos droits": "ñɔ-wahɩyɛ / ñɔ-paɣtʊ",
+      "salaire / paie": "tʊmɩyɛ liidiye / fezuu",
+      "patron / employeur": "tʊmɩyɛ tɩnʊ / ñʊʊdʊ",
+      "travailleur / salarié": "tʊmɩyɛ laɖʊ",
+      "inspection du travail": "tʊmɩyɛ cɔnɩyaa (Inspection du travail)",
+      "contrat / acte écrit": "nɩnaʊ takayaɣ",
+      "propriétaire / bailleur": "ɖɩɣa tɩnʊ",
+      "locataire": "ɖɩɣa hɛyɩyʊ",
+      "expulsion": "kʊyɩnaʊ / lɩzʊʊ ɖɩɣa taa",
+      "tribunal / justice": "tɔm hʊʊ kɩyakʊ (Tribunal)",
+      "terrain / parcelle": "tɛtʊ",
+      "titre foncier": "tɛtʊ takayaɣ sɔsɔɣa (Titre Foncier - OTR)",
+      "cadastre / OTR": "tɛtʊ cɔnɩyaa (Cadastre / OTR)",
+      "notaire": "paɣtʊ takayaɣ mayʊ (Notaire)",
+      "preuves": "seedee takayɩsɩ"
+    },
+    "model_sentences": [
+      "Togo tʊmɩyɛ paɣtʊ (Loi n° 2021-012) tɔŋ se tʊmɩyɛ tɩnʊ ɛhɛyɩ tʊmɩyɛ laɖʊ ɛ-liidiye fenaɣ tɛm wayɩ [1].",
+      "Yee ña-ñʊʊdʊ ɛtaahɛyɩ-ŋ ñɔ-tʊmɩyɛ liidiye yɔ, papɩzɩɣ pama-ɩ takayaɣ (mise en demeure) yaa powolo tʊmɩyɛ cɔnɩyaa cɔlɔ (Inspection du travail) [2].",
+      "Togo paɣtʊ taa lɛ (Décret n° 2022-001/PR), ɖɩɣa tɩnʊ ɛɛpɩzɩɣ ɛlɩzɩ ɖɩɣa hɛyɩyʊ nɛ ɖoŋ yee tɔm hʊʊ kɩyakʊ (Tribunal) ɛtaha waɖɛ yɔ [1].",
+      "Pʊcɔ nɛ na-tɛtʊ Agoè yaa Lomé lɛ, pʊwɛɛ se na-ñɩnɩ tɛtʊ takayaɣ sɔsɔɣa (Titre Foncier) OTR nɛ Notaire cɔlɔ [1]."
+    ],
+    "keywords_to_fr": {
+      "liidiye": "mon patron ne m'a pas payé mon salaire",
+      "fezuu": "mon patron ne m'a pas payé mon salaire",
+      "tʊmɩyɛ": "je veux saisir l'inspection du travail salaire",
+      "ñʊʊdʊ": "mon patron ne m'a pas payé mon salaire",
+      "ɖɩɣa": "mon propriétaire veut m'expulser sans décision de justice",
+      "lɩzʊʊ": "mon propriétaire veut m'expulser sans décision de justice",
+      "tɛtʊ": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
+      "takayaɣ": "acte notarié titre foncier cadastre",
+      "paɣtʊ": "loi droit justice"
+    }
+  }
+}

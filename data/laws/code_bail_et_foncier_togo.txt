@@ -1,0 +1,11 @@
+# source: Décret n° 2022-001/PR sur le bail d'habitation et Loi n° 2018-005 portant Code foncier et domanial au Togo
+# kind: loi
+# scope: national
+# url: https://jo.gouv.tg/
+# title: Réglementation du bail d'habitation et du foncier au Togo
+
+Article 1. (Art. 8, 10 et 24 du Décret n° 2022-001/PR réglementant le bail d'habitation) Au Togo, le contrat de bail à usage d'habitation doit être conclu par écrit. Lors de la conclusion du bail, le montant cumulé de la caution et de la garantie de loyer exigé par le propriétaire ne peut excéder trois (3) mois de loyer chacun. Le bailleur qui veut mettre fin au bail d'habitation doit obligatoirement donner congé au locataire par écrit (lettre recommandée avec accusé de réception ou exploit d'huissier) en respectant un délai de préavis légal d'au moins trois (3) mois avant le terme prévu.
+
+Article 2. (Art. 26 et 27 du Décret n° 2022-001/PR sur le bail d'habitation) Le locataire ne peut en aucun cas être expulsé de son logement sans décision de justice préalable rendue par le tribunal compétent (Tribunal de Première Instance), même si le bailleur a donné congé, si le délai de préavis est expiré ou s'il existe des loyers impayés. Toute expulsion forcée sans préavis ni titre exécutoire (changement de serrure, enlèvement de toiture, coupure d'eau ou d'électricité, mise à la rue des effets personnels) constitue une voie de fait illégale passible de poursuites. Le locataire menacé d'expulsion arbitraire peut saisir le juge des référés ou solliciter l'assistance gratuite d'une ONG de défense des droits et des consommateurs (LCT, CACIT, ATC).
+
+Article 3. (Art. 142, 166 et 254 de la Loi n° 2018-005 du 14 juin 2018 portant Code foncier et domanial) Avant d'acheter un terrain au Togo (notamment à Agoè-Nyivé, dans le Grand Lomé ou à l'intérieur du pays), l'acquéreur doit impérativement demander le titre foncier (TF) définitif et inattaquable, et vérifier auprès du service du cadastre et de la conservation foncière de l'OTR (Office Togolais des Recettes) l'historique complet de propriété afin de s'assurer qu'aucune autre vente (double vente), hypothèque, saisie ou opposition judiciaire n'est enregistrée sur la parcelle. À peine de nullité absolue (Art. 166 du Code foncier), tout acte de vente immobilière doit obligatoirement être passé en la forme authentique devant un notaire territorialement compétent.

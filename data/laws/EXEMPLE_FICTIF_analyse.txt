@@ -1,0 +1,8 @@
+# source: EXEMPLE FICTIF - Fiche pratique
+# kind: analyse
+# url:
+[EXEMPLE FICTIF pour tester l'indexation des analyses. Remplacez-le par des contenus dont la réutilisation est autorisée.]
+
+Salaire impayé : la première étape consiste à garder des preuves, comme le contrat, les bulletins de paie et les messages échangés avec l'employeur.
+
+Ensuite, une lettre de mise en demeure envoyée avec accusé de réception ou déchargée par l'employeur fixe un délai pour payer. Si rien ne change, l'inspection du travail peut être saisie.

@@ -1,0 +1,238 @@
+[
+  {
+    "id": "TG-AGN-014",
+    "name": "Agoè-Nyivé, lot 14",
+    "quartier": "Agoè-Nyivé",
+    "ilot": "3",
+    "lot": "14",
+    "commune": "Agoè-Nyivé 1",
+    "nature_terrain": "Lotissement approuvé",
+    "titre": "enregistre",
+    "reference_titre": "TF n° 12345/TG",
+    "requisition": "Réq. n° 4589/OTR",
+    "trois_tampons": "oui",
+    "zone_reserve": false,
+    "collectivite": "Individuel (Acquis de la collectivité Adjigo)",
+    "proprietaire": "KOFFI Mensah",
+    "superficie_m2": 600,
+    "limites": "precises",
+    "urbanisme": "conforme",
+    "litige": false,
+    "ventes": [
+      {
+        "date": "2019-03-12",
+        "acquereur": "KOFFI Mensah",
+        "statut": "actif",
+        "notaire": "Me K. DOGBEVI"
+      }
+    ],
+    "polygon": [
+      [
+        6.232,
+        1.219
+      ],
+      [
+        6.232,
+        1.2215
+      ],
+      [
+        6.23,
+        1.2215
+      ],
+      [
+        6.23,
+        1.219
+      ]
+    ]
+  },
+  {
+    "id": "TG-AGN-027",
+    "name": "Agoè-Nyivé, lot 27",
+    "quartier": "Agoè-Nyivé",
+    "ilot": "5",
+    "lot": "27",
+    "commune": "Agoè-Nyivé 2 (Légbassito)",
+    "nature_terrain": "Coutumier en cours d'immatriculation",
+    "titre": "a_verifier",
+    "reference_titre": "Certificat Administratif n° 089/CA",
+    "requisition": "Réq. n° 8812/OTR (En cours)",
+    "trois_tampons": "en_attente",
+    "zone_reserve": false,
+    "collectivite": "Collectivité familiale Amégah",
+    "proprietaire": "AMEGAH Kossi",
+    "superficie_m2": 450,
+    "limites": "precises",
+    "urbanisme": "partiel",
+    "litige": false,
+    "ventes": [
+      {
+        "date": "2018-07-02",
+        "acquereur": "AMEGAH Kossi",
+        "statut": "actif",
+        "notaire": "Sous seing privé visé"
+      }
+    ],
+    "polygon": [
+      [
+        6.235,
+        1.224
+      ],
+      [
+        6.235,
+        1.2262
+      ],
+      [
+        6.2332,
+        1.2262
+      ],
+      [
+        6.2332,
+        1.224
+      ]
+    ]
+  },
+  {
+    "id": "TG-KEG-031",
+    "name": "Kégué, lot 31",
+    "quartier": "Kégué",
+    "ilot": "2",
+    "lot": "31",
+    "commune": "Golfe 2",
+    "nature_terrain": "Terrain familial indivis litigieux",
+    "titre": "a_verifier",
+    "reference_titre": "Réq. n° 1904/TG (Opposition)",
+    "requisition": "Opposition inscrite au Livre Foncier",
+    "trois_tampons": "non",
+    "zone_reserve": false,
+    "collectivite": "Succession indivise Dogbé (Héritiers en conflit)",
+    "proprietaire": "DOGBE Ama",
+    "superficie_m2": 500,
+    "limites": "precises",
+    "urbanisme": "conforme",
+    "litige": true,
+    "ventes": [
+      {
+        "date": "2020-01-15",
+        "acquereur": "DOGBE Ama",
+        "statut": "actif",
+        "notaire": "Reçu sous seing privé"
+      },
+      {
+        "date": "2021-06-30",
+        "acquereur": "TOGBUI Yao",
+        "statut": "actif",
+        "notaire": "Seconde vente contestée"
+      }
+    ],
+    "polygon": [
+      [
+        6.165,
+        1.23
+      ],
+      [
+        6.165,
+        1.233
+      ],
+      [
+        6.1628,
+        1.233
+      ],
+      [
+        6.1628,
+        1.23
+      ]
+    ]
+  },
+  {
+    "id": "TG-ADI-042",
+    "name": "Adidogomé, lot 42",
+    "quartier": "Adidogomé",
+    "ilot": "7",
+    "lot": "42",
+    "commune": "Golfe 7 (Sagbado)",
+    "nature_terrain": "Ancien plan non numérisé",
+    "titre": "non_numerise",
+    "reference_titre": "Ancien plan 1998 sans TF",
+    "requisition": "Non déposée à l'OTR",
+    "trois_tampons": "partiel",
+    "zone_reserve": false,
+    "collectivite": "Famille Agbodjan",
+    "proprietaire": "AGBODJAN Esi",
+    "superficie_m2": 400,
+    "limites": "imprecises",
+    "urbanisme": "conforme",
+    "litige": false,
+    "ventes": [
+      {
+        "date": "2017-11-20",
+        "acquereur": "AGBODJAN Esi",
+        "statut": "actif",
+        "notaire": "Acte coutumier"
+      }
+    ],
+    "polygon": [
+      [
+        6.186,
+        1.185
+      ],
+      [
+        6.186,
+        1.1878
+      ],
+      [
+        6.1838,
+        1.1878
+      ],
+      [
+        6.1838,
+        1.185
+      ]
+    ]
+  },
+  {
+    "id": "TG-BAG-008",
+    "name": "Baguida, lot 8",
+    "quartier": "Baguida",
+    "ilot": "1",
+    "lot": "8",
+    "commune": "Golfe 6 (Baguida)",
+    "nature_terrain": "Titre Foncier définitif apuré",
+    "titre": "enregistre",
+    "reference_titre": "TF n° 28910/RT",
+    "requisition": "Réq. n° 1120/OTR (Purge complète)",
+    "trois_tampons": "oui",
+    "zone_reserve": false,
+    "collectivite": "Propriété individuelle Lawson",
+    "proprietaire": "LAWSON Edem",
+    "superficie_m2": 800,
+    "limites": "precises",
+    "urbanisme": "conforme",
+    "litige": false,
+    "ventes": [
+      {
+        "date": "2016-05-09",
+        "acquereur": "LAWSON Edem",
+        "statut": "actif",
+        "notaire": "Me A. AQUEREBURU"
+      }
+    ],
+    "polygon": [
+      [
+        6.14,
+        1.32
+      ],
+      [
+        6.14,
+        1.3235
+      ],
+      [
+        6.1375,
+        1.3235
+      ],
+      [
+        6.1375,
+        1.32
+      ]
+    ]
+  }
+]

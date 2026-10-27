@@ -1,0 +1,75 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Novissi : menu principal",
+      "type": "shell",
+      "command": "bash run.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "2. Installer les dépendances",
+      "type": "shell",
+      "command": "bash setup.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "3. Lancer frontend + backend",
+      "type": "shell",
+      "command": "bash dev.sh",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "4. Actualiser les textes juridiques",
+      "type": "shell",
+      "command": "bash scrape.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "5. Auditer Voix du Togo",
+      "type": "shell",
+      "command": "bash -lc 'source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate; python -m backend.language_sources.voix_du_togo'",
+      "problemMatcher": []
+    },
+    {
+      "label": "6. Exécuter les tests",
+      "type": "shell",
+      "command": "bash -lc 'source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate; pytest -q tests; cd frontend && npm test -- --reporter=default && npm run build'",
+      "problemMatcher": []
+    },
+    {
+      "label": "7. Diagnostiquer un site",
+      "type": "shell",
+      "command": "bash diagnose.sh ${input:url}",
+      "problemMatcher": []
+    },
+    {
+      "label": "9. Rapport d'exhaustivité de la collecte",
+      "type": "shell",
+      "command": "bash report.sh",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "url",
+      "type": "promptString",
+      "description": "URL à tester",
+      "default": "https://jo.gouv.tg"
+    }
+  ]
+}

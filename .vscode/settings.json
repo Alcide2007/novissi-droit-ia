@@ -1,0 +1,6 @@
+{
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "python.terminal.activateEnvironment": false,
+  "files.eol": "\n",
+  "[shellscript]": { "files.eol": "\n" }
+}
