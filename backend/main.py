@@ -23,7 +23,7 @@ from slowapi.util import get_remote_address
 
 from . import conversations
 from . import legal_scraper
-from registry import RESOURCE_STATUSES, Registry
+from .registry import RESOURCE_STATUSES, Registry
 from . import ocr
 from . import rag
 from . import terracheck
