@@ -278,124 +278,24 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
   flex-wrap: wrap;
 }
 
-/* Adaptation complète pour Smartphone & Mobile (< 768px) */
-@media (max-width: 768px) {
-  html, body, .shell, .main {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-  .topbar {
-    padding: 8px 10px;
-    gap: 6px;
-    min-height: 50px;
-  }
-  .topbar h1 {
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 135px;
-  }
-  .topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: auto;
-  }
-  .topbar-lang {
-    font-size: 12px;
-    padding: 4px 6px;
-    border-radius: 8px;
-    max-width: 85px;
-  }
-  .share-btn span {
-    display: none;
-  }
-  .share-btn {
-    padding: 6px 8px;
-  }
-  .chat-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px;
-  }
-  .chat-toolbar .chip {
-    justify-content: center;
-    width: 100%;
-  }
-  input, textarea, select {
-    font-size: 16px !important;
-  }
-  .composer-wrap {
-    padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
-  }
-  .composer {
-    padding: 6px 8px;
-    border-radius: 20px;
-    gap: 4px;
-  }
-  .composer textarea {
-    padding: 6px;
-    max-height: 120px;
-  }
-  .composer .icon {
-    width: 34px;
-    height: 34px;
-    padding: 6px;
-  }
-  .hero {
-    margin: 3vh auto 14px;
-    padding: 0 10px;
-  }
-  .hero h2 {
-    font-size: 18px;
-    margin-bottom: 14px;
-  }
-  .suggest, .grid2, .two {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
-  }
-  .card {
-    min-height: auto;
-    padding: 11px 12px;
-    font-size: 13.5px;
-  }
-  .bubble {
-    max-width: 92%;
-    font-size: 14.5px;
-    padding: 9px 13px;
-  }
-  .page {
-    padding: 12px 10px 30px;
-  }
-  .panel {
-    padding: 14px 12px;
-    border-radius: 12px;
-  }
-  .letter-paper {
-    padding: 14px 12px;
-    font-size: 12px;
-  }
-  .map {
-    height: 260px;
-    border-radius: 10px;
-  }
-}
 
 
 @media (max-width: 768px) {
+  *, *:before, *:after {
+    box-sizing: border-box;
+  }
   html, body {
     margin: 0;
     padding: 0;
-    width: 100vw;
-    height: 100dvh;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
+    position: fixed;
   }
   .shell {
     display: flex;
-    width: 100vw;
-    height: 100dvh;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     position: relative;
   }
@@ -405,11 +305,11 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     left: 0;
     bottom: 0;
     width: 280px !important;
-    max-width: 85vw;
-    z-index: 9999 !important;
+    max-width: 82vw;
+    z-index: 99999 !important;
     transform: translateX(-100%);
     transition: transform 0.25s ease-in-out;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+    box-shadow: 10px 0 30px rgba(0,0,0,0.35);
   }
   .sidebar.open {
     transform: translateX(0) !important;
@@ -419,25 +319,27 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 8888 !important;
+    z-index: 88888 !important;
   }
   .scrim.open, div.scrim {
     display: block;
   }
   .main {
-    flex: 1;
-    width: 100vw;
-    height: 100dvh;
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     min-width: 0;
     overflow: hidden;
+    position: relative;
   }
   .topbar {
     padding: 8px 12px;
     gap: 8px;
     min-height: 52px;
-    flex: none;
+    flex: 0 0 auto;
+    width: 100%;
   }
   .topbar h1 {
     font-size: 14px;
@@ -468,6 +370,7 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     align-items: stretch;
     gap: 6px;
     padding: 8px 10px;
+    flex: 0 0 auto;
   }
   .chat-toolbar .chip {
     justify-content: center;
@@ -477,39 +380,50 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     font-size: 16px !important;
   }
   .scroll {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding: 12px 10px;
   }
   .composer-wrap {
-    flex: none;
+    flex: 0 0 auto;
+    width: 100%;
     padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   }
   .composer {
+    display: flex;
+    width: 100%;
     padding: 6px 8px;
     border-radius: 20px;
     gap: 4px;
+    align-items: flex-end;
   }
   .composer textarea {
+    flex: 1;
+    min-width: 0;
     padding: 6px;
-    max-height: 120px;
+    max-height: 110px;
   }
   .hero {
-    margin: 2vh auto 12px;
-    padding: 0 10px;
+    margin: 1vh auto 10px;
+    padding: 0 5px;
+    width: 100%;
   }
   .hero h2 {
-    font-size: 17px;
-    margin-bottom: 12px;
+    font-size: 16px;
+    margin-bottom: 10px;
   }
   .suggest, .grid2, .two {
     grid-template-columns: 1fr !important;
-    gap: 10px;
+    gap: 8px;
+    width: 100%;
   }
   .card {
     min-height: auto;
     padding: 10px 12px;
     font-size: 13px;
+    width: 100%;
   }
   .bubble {
     max-width: 92%;
@@ -517,21 +431,203 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     padding: 8px 12px;
   }
   .page {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
     padding: 12px 10px 30px;
   }
   .panel {
     padding: 14px 12px;
     border-radius: 12px;
+    width: 100%;
   }
   .letter-paper {
     padding: 12px 10px;
-    font-size: 11.5px;
+    font-size: 11px;
+    width: 100%;
   }
   .map {
     height: 240px;
     border-radius: 10px;
+    width: 100%;
+  }
+}
+
+
+/* ==========================================================================
+   CORRECTIF MOBILE ABSOLU (Écrans < 768px) - Empêche l'affichage permanent de la sidebar
+   ========================================================================== */
+@media (max-width: 768px) {
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  .shell {
+    display: flex !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 82vw !important;
+    z-index: 99999 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s ease-in-out !important;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.35) !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+  .scrim {
+    display: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.5) !important;
+    z-index: 88888 !important;
+  }
+  .scrim.open, div.scrim {
+    display: block !important;
+  }
+  .main {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  .topbar {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    min-height: 52px !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  .topbar h1 {
+    font-size: 14px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 130px !important;
+  }
+  .topbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin-left: auto !important;
+  }
+  .topbar-lang {
+    font-size: 12px !important;
+    padding: 4px 6px !important;
+    max-width: 80px !important;
+  }
+  .share-btn span {
+    display: none !important;
+  }
+  .burger, .close {
+    display: inline-flex !important;
+  }
+  .chat-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+    flex: 0 0 auto !important;
+  }
+  .chat-toolbar .chip {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  .scroll {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+    padding: 12px 10px !important;
+  }
+  .composer-wrap {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+  .composer {
+    display: flex !important;
+    width: 100% !important;
+    padding: 6px 8px !important;
+    border-radius: 20px !important;
+    gap: 4px !important;
+    align-items: flex-end !important;
+  }
+  .composer textarea {
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 6px !important;
+    max-height: 110px !important;
+  }
+  .hero {
+    margin: 1vh auto 10px !important;
+    padding: 0 5px !important;
+    width: 100% !important;
+  }
+  .hero h2 {
+    font-size: 16px !important;
+    margin-bottom: 10px !important;
+  }
+  .suggest, .grid2, .two {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .card {
+    min-height: auto !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    width: 100% !important;
+  }
+  .bubble {
+    max-width: 92% !important;
+    font-size: 14px !important;
+    padding: 8px 12px !important;
+  }
+  .page {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+    padding: 12px 10px 30px !important;
+  }
+  .panel {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+  }
+  .letter-paper {
+    padding: 12px 10px !important;
+    font-size: 11px !important;
+    width: 100% !important;
+  }
+  .map {
+    height: 240px !important;
+    border-radius: 10px !important;
+    width: 100% !important;
   }
 }
