@@ -21,12 +21,12 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-import conversations
+from . import conversations
 import legal_scraper
 from registry import RESOURCE_STATUSES, Registry
 import ocr
 import rag
-import terracheck
+from . import terracheck
 from postgres_catalog import PostgresCatalog
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
