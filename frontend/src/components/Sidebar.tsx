@@ -5,6 +5,7 @@ import { t } from "../i18n";
 import AccountMenu from "./AccountMenu";
 import {
   IconActe,
+  IconCheck,
   IconClose,
   IconEdit,
   IconLetter,
@@ -16,7 +17,7 @@ import {
 } from "./Icons";
 import NovissiLogo from "./NovissiLogo";
 
-export type View = "chat" | "docs" | "acte" | "terra";
+export type View = "chat" | "docs" | "acte" | "terra" | "prev";
 
 type Props = {
   view: View; onView: (v: View) => void; convs: Conversation[]; activeId: string | null;
@@ -37,6 +38,7 @@ export default function Sidebar(p: Props) {
     ["docs", ui.navDocs, <IconLetter size={18} />, "Génération de courriers"],
     ["acte", ui.navActe, <IconActe size={18} />, "Analyse d’actes"],
     ["terra", ui.navTerra, <IconTerra size={18} />, "TerraCheck : vérification foncière"],
+    ["prev", ui.navPrev, <IconCheck size={18} />, "Prévention achat terrain"],
   ];
 
   async function rename(c: Conversation) {

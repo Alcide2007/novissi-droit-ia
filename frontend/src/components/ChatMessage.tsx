@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
-import type { Lang, Source } from "../api";
+import type { Lang, LetterKind, Source, SuggestedLetter } from "../api";
 import { t } from "../i18n";
 import CitationList from "./CitationList";
-import { IconCopy, IconSparkle, IconStop, IconVolume } from "./Icons";
+import { IconCopy, IconLetter, IconSparkle, IconStop, IconVolume } from "./Icons";
 import Markdown from "./Markdown";
 import NovissiLogo from "./NovissiLogo";
 
-export type Msg = { role: "u" | "a"; text: string; sources?: Source[]; notice?: string | null; mode?: string | null; error?: boolean };
+export type Msg = {
+  role: "u" | "a";
+  text: string;
+  sources?: Source[];
+  notice?: string | null;
+  mode?: string | null;
+  error?: boolean;
+  suggested_letter?: SuggestedLetter | null;
+};
 
-function cleanForSpeech(raw: string): string {
+export function cleanForSpeech(raw: string): string {
   return raw
     .replace(/\[\d+\]/g, "")
     .replace(/[#*_`~>-]/g, " ")
@@ -17,7 +25,13 @@ function cleanForSpeech(raw: string): string {
     .trim();
 }
 
-export default function ChatMessage({ m, lang = "Français" }: { m: Msg; lang?: Lang }) {
+type Props = {
+  m: Msg;
+  lang?: Lang;
+  onOpenLetter?: (kind: LetterKind) => void;
+};
+
+export default function ChatMessage({ m, lang = "Français", onOpenLetter }: Props) {
   const [speaking, setSpeaking] = useState(false);
   const ui = t(lang);
 
@@ -62,6 +76,24 @@ export default function ChatMessage({ m, lang = "Français" }: { m: Msg; lang?: 
       <div className="body">
         {m.error ? <p className="err" role="alert">{m.text}</p> : <Markdown text={m.text} />}
         {m.notice && <p className="notice">{m.notice}</p>}
+
+        {m.suggested_letter && onOpenLetter && (
+          <div className="letter-cta-box">
+            <span>
+              📄 <b>{m.suggested_letter.label}</b>
+            </span>
+            <button
+              type="button"
+              className="btn"
+              style={{ padding: "7px 14px", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              onClick={() => onOpenLetter(m.suggested_letter!.kind)}
+            >
+              <IconLetter size={15} />
+              <span>{ui.writeRecommendedLetter}</span>
+            </button>
+          </div>
+        )}
+
         {m.mode === "ia" && (
           <p className="muted" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <IconSparkle size={14} />

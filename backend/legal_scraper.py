@@ -36,8 +36,12 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from .registry import Registry
-from .splitter import split_by_kind
+try:
+    from .registry import Registry
+    from .splitter import split_by_kind
+except ImportError:
+    from registry import Registry
+    from splitter import split_by_kind
 
 log = logging.getLogger("novissi.scraper")
 

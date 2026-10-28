@@ -248,17 +248,42 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
   .collapse-btn{display:none}
   .sidebar.collapsed{width:min(300px,85vw);align-items:stretch;padding:16px 12px}
 }
-/* ==========================================================================
-   ADAPTATION SMARTPHONE & MOBILE (Écrans < 768px)
-   ========================================================================== */
+
+
+/* Aperçu papier officiel du courrier et boîte de redirection Chat -> Courrier */
+.letter-paper {
+  background: #ffffff;
+  color: #102a43;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 28px 32px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 13.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.letter-cta-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--pr);
+  background: var(--side);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Adaptation complète pour Smartphone & Mobile (< 768px) */
 @media (max-width: 768px) {
-  /* Empêche tout débordement horizontal indésirable */
   html, body, .shell, .main {
     max-width: 100vw;
     overflow-x: hidden;
   }
-
-  /* 1. Barre supérieure compacte pour mobile */
   .topbar {
     padding: 8px 10px;
     gap: 6px;
@@ -269,7 +294,7 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 130px;
+    max-width: 135px;
   }
   .topbar-actions {
     display: flex;
@@ -281,22 +306,27 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     font-size: 12px;
     padding: 4px 6px;
     border-radius: 8px;
-    max-width: 80px;
+    max-width: 85px;
   }
   .share-btn span {
-    display: none; /* Cache le texte "Partager" sur smartphone pour ne garder que l'icône */
+    display: none;
   }
   .share-btn {
     padding: 6px 8px;
-    border-radius: 8px;
   }
-
-  /* 2. Évite le zoom automatique sur iPhone et Android au toucher */
+  .chat-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .chat-toolbar .chip {
+    justify-content: center;
+    width: 100%;
+  }
   input, textarea, select {
     font-size: 16px !important;
   }
-
-  /* 3. Zone de saisie du chat collée et ergonomique */
   .composer-wrap {
     padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   }
@@ -314,41 +344,28 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     height: 34px;
     padding: 6px;
   }
-
-  /* 4. Cartes de suggestions sur la page d'accueil */
   .hero {
-    margin: 3vh auto 15px;
-    padding: 0 12px;
+    margin: 3vh auto 14px;
+    padding: 0 10px;
   }
   .hero h2 {
-    font-size: 19px;
-    margin-bottom: 16px;
+    font-size: 18px;
+    margin-bottom: 14px;
   }
-  .suggest {
-    grid-template-columns: 1fr;
-    gap: 8px;
+  .suggest, .grid2, .two {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
   }
   .card {
     min-height: auto;
-    padding: 10px 12px;
+    padding: 11px 12px;
     font-size: 13.5px;
   }
-
-  /* 5. Bulles de message et citations */
   .bubble {
     max-width: 92%;
     font-size: 14.5px;
     padding: 9px 13px;
   }
-  .turn {
-    gap: 8px;
-  }
-  .gemini-avatar {
-    width: 26px !important;
-    height: 26px !important;
-  }
-
-  /* 6. Formulaires des courriers et Décodeur d'actes */
   .page {
     padding: 12px 10px 30px;
   }
@@ -356,25 +373,12 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     padding: 14px 12px;
     border-radius: 12px;
   }
-  .grid2, .two {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
+  .letter-paper {
+    padding: 14px 12px;
+    font-size: 12px;
   }
-  .row input {
-    min-width: 100%;
-  }
-
-  /* 7. Carte TerraCheck ajustée */
   .map {
-    height: 280px;
+    height: 260px;
     border-radius: 10px;
-  }
-
-  /* 8. Tableaux et blocs préformatés lisibles avec défilement fluide */
-  .md table, pre {
-    max-width: 100%;
-    overflow-x: auto;
-    display: block;
-    font-size: 12.5px;
   }
 }

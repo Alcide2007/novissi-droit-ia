@@ -47,5 +47,3 @@ cd frontend && npm test && npm run build         # tests vitest + compilation Ty
 ## Sécurité
 Les clés vont dans `.env` (copié depuis `.env.example`), jamais dans le code ni dans `.env.example`.
 Les collecteurs respectent `robots.txt` et espacent leurs requêtes.
-# novissi-droit-ia
-# novissi-droit-ia

@@ -1,16 +1,16 @@
 # Secrets : ne jamais envoyer sur GitHub
 .env
-.env.example
-# Pythons
+
+# Python
 .venv/
 venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 
-# Node.js
-frontend/node_modules/
-frontend/dist/
+# Node
+node_modules/
+dist/
 
 # Textes récupérés automatiquement (régénérés par les collecteurs)
 data/laws/jo__*
@@ -22,5 +22,3 @@ data/laws/index.json
 data/pdf/*
 !data/pdf/.gitkeep
 data/*.db
-data/registry.db
-data/conversations.db

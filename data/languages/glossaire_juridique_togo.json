@@ -34,7 +34,7 @@
       "Hafi nàƒle anyigba le Agoè alo Lomé la, ele be nàbia anyigbagbalẽ gã (Titre Foncier) eye nàdo गोome kpɔ le Cadastre (OTR) be womedzra anyigba ma na ame bubu xoxo o [1]."
     ],
     "keywords_to_fr": {
-      "fetu": "salaire impayé patron travail",
+      "fetu": "mon patron ne m'a pas payé mon salaire",
       "dɔwɔfetu": "salaire impayé patron travail",
       "dɔwɔtɔ": "patron employeur salaire travail",
       "dɔwɔtɔnye": "mon patron ne m'a pas payé mon salaire",
@@ -44,7 +44,14 @@
       "nyanya": "expulsion sans décision de justice bail",
       "anyigba": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
       "anyigbagbalẽ": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
-      "agbalẽ": "acte notarié contrat"
+      "agbalẽ": "acte notarié contrat",
+      "dɔwɔse": "code du travail salaire inspection du travail",
+      "kpukpui": "article code du travail loi",
+      "mexe": "mon patron ne m'a pas payé mon salaire",
+      "préavis": "mon propriétaire veut m'expulser sans décision de justice",
+      "xɔa": "mon propriétaire veut m'expulser sans décision de justice",
+      "aƒle": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
+      "cadastre": "que vérifier avant d'acheter un terrain titre foncier et cadastre"
     }
   },
   "Kabiyè": {
@@ -82,7 +89,12 @@
       "lɩzʊʊ": "mon propriétaire veut m'expulser sans décision de justice",
       "tɛtʊ": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
       "takayaɣ": "acte notarié titre foncier cadastre",
-      "paɣtʊ": "loi droit justice"
+      "paɣtʊ": "loi droit justice",
+      "mañʊʊdʊ": "mon patron ne m'a pas payé mon salaire",
+      "ɛtaahɛyɩ": "mon patron ne m'a pas payé mon salaire",
+      "ɛlɩzɩ": "mon propriétaire veut m'expulser sans décision de justice",
+      "cɔnɩ": "que vérifier avant d'acheter un terrain titre foncier et cadastre",
+      "ñɩnɩ": "code du travail salaire inspection du travail"
     }
   }
 }

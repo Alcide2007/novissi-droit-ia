@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./api";
-import type { Conversation, Lang, UserAccount } from "./api";
+import type { Conversation, Lang, LetterKind, UserAccount } from "./api";
 import ChatPage from "./components/ChatPage";
 import { IconMenu, IconShare } from "./components/Icons";
 import Sidebar, { type View } from "./components/Sidebar";
 import ThemeToggle from "./components/ThemeToggle";
 import ActeAnalyzer from "./features/ActeAnalyzer";
 import LetterGenerator from "./features/LetterGenerator";
+import PreventionFoncierPage from "./features/PreventionFoncierPage";
 import TerraCheckPage from "./features/TerraCheckPage";
 import { t } from "./i18n";
 
@@ -14,6 +15,7 @@ export default function App() {
   const [view, setView] = useState<View>("chat");
   const [lang, setLang] = useState<Lang>("Français");
   const [focus, setFocus] = useState<api.Diag | null>(null);
+  const [selectedLetterKind, setSelectedLetterKind] = useState<LetterKind | null>(null);
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -32,6 +34,7 @@ export default function App() {
     docs: ui.titleDocs,
     acte: ui.titleActe,
     terra: ui.titleTerra,
+    prev: ui.titlePrev,
   };
 
   const refresh = useCallback(() => {
@@ -144,9 +147,13 @@ export default function App() {
             onConvId={setActiveId}
             onChanged={refresh}
             onTranscriptChange={handleTranscriptChange}
+            onOpenLetter={(kind) => {
+              setSelectedLetterKind(kind);
+              setView("docs");
+            }}
           />
         )}
-        {view === "docs" && <div className="page"><LetterGenerator lang={lang} /></div>}
+        {view === "docs" && <div className="page"><LetterGenerator lang={lang} initialKind={selectedLetterKind} /></div>}
         {view === "acte" && (
           <div className="page">
             <ActeAnalyzer
@@ -160,8 +167,19 @@ export default function App() {
           <div className="page">
             <TerraCheckPage
               focus={focus}
-              onDecodeParcel={(d) => { setFocus(d); setView("acte"); }}
               lang={lang}
+              onDecodeParcel={(d) => { setFocus(d); setView("acte"); }}
+            />
+          </div>
+        )}
+        {view === "prev" && (
+          <div className="page">
+            <PreventionFoncierPage
+              lang={lang}
+              onNavigate={(nextView, letterKind) => {
+                if (letterKind) setSelectedLetterKind(letterKind);
+                setView(nextView);
+              }}
             />
           </div>
         )}

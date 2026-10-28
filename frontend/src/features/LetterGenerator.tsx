@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as api from "../api";
 import type { Lang, LetterKind } from "../api";
 import { IconCopy, IconLetter } from "../components/Icons";
 import { t } from "../i18n";
 
-export default function LetterGenerator({ lang = "Français" }: { lang?: Lang }) {
+type Props = {
+  lang?: Lang;
+  initialKind?: LetterKind | null;
+};
+
+export default function LetterGenerator({ lang = "Français", initialKind }: Props) {
   const [f, setF] = useState<api.LetterIn>({
-    kind: "salaire",
+    kind: initialKind || "salaire",
     nom: "",
     adresse: "",
     telephone: "",
@@ -20,6 +25,7 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
   const [res, setRes] = useState<api.LetterOut | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const ui = t(lang);
   const set = <K extends keyof api.LetterIn>(k: K, v: api.LetterIn[K]) => setF((p) => ({ ...p, [k]: v }));
 
@@ -27,7 +33,7 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
     {
       group: ui.groupTravail,
       items: [
-        { value: "salaire", label: ui.letterSalaire, destLabel: ui.employer, destPlaceholder: "Ex. Monsieur le Directeur Général", showAmount: true },
+        { value: "salaire", label: ui.letterSalaire, destLabel: ui.employer, destPlaceholder: "Ex. Société X / Monsieur le Directeur Général", showAmount: true },
         { value: "inspection_travail", label: ui.letterInspectionTravail, destLabel: "Inspection du Travail", destPlaceholder: "Ex. Monsieur l’Inspecteur du Travail (Lomé)", showAmount: true },
         { value: "licenciement_abusif", label: ui.letterLicenciement, destLabel: ui.employer, destPlaceholder: "Ex. Monsieur le Directeur", showAmount: true },
         { value: "certificat_travail", label: ui.letterCertificat, destLabel: ui.employer, destPlaceholder: "Ex. Madame la Directrice des Ressources Humaines" },
@@ -73,9 +79,13 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
           ? "Monsieur l’Inspecteur du Travail et des Lois Sociales"
           : meta?.destPlaceholder.includes("Procureur")
           ? "Monsieur le Procureur de la République près le TPI"
-          : "",
+          : prev.destinataire,
     }));
   }
+
+  useEffect(() => {
+    if (initialKind) onKindChange(initialKind);
+  }, [initialKind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function go() {
     setBusy(true); setErr(""); setRes(null);
@@ -83,7 +93,24 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
     setBusy(false);
   }
 
-  function download() {
+  async function downloadPdf() {
+    setPdfBusy(true); setErr("");
+    try {
+      const blob = await api.letterPdf(f);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `courrier-${f.kind}-togo.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  function downloadTxt() {
     if (!res) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([res.texte], { type: "text/plain;charset=utf-8" }));
@@ -150,6 +177,9 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
           <IconLetter size={16} />
           <span>{busy ? ui.generatingLetter : ui.generateLetter}</span>
         </button>
+        <button type="button" className="btn ghost" onClick={() => void downloadPdf()} disabled={pdfBusy || f.nom.length < 2 || f.destinataire.length < 2}>
+          <span>{pdfBusy ? "Génération PDF…" : ui.downloadPdf}</span>
+        </button>
       </div>
 
       {err && <p className="err">{err}</p>}
@@ -157,13 +187,16 @@ export default function LetterGenerator({ lang = "Français" }: { lang?: Lang })
       {res && (
         <div className="result">
           <h2>{res.titre}</h2>
-          <pre className="letter" style={{ fontFamily: "monospace", padding: "20px", fontSize: "13px", lineHeight: "1.6" }}>{res.texte}</pre>
+          <pre className="letter-paper">{res.texte}</pre>
           <div className="row">
-            <button type="button" className="btn" onClick={() => navigator.clipboard?.writeText(res.texte)}>
+            <button type="button" className="btn" onClick={() => void downloadPdf()} disabled={pdfBusy}>
+              <span>{pdfBusy ? "Génération PDF…" : ui.downloadPdf}</span>
+            </button>
+            <button type="button" className="btn ghost" onClick={() => navigator.clipboard?.writeText(res.texte)}>
               <IconCopy size={15} />
               <span>{ui.copy}</span>
             </button>
-            <button type="button" className="btn ghost" onClick={download}>{ui.download}</button>
+            <button type="button" className="btn ghost" onClick={downloadTxt}>{ui.download} (.txt)</button>
           </div>
           <h3>{ui.whereToGo}</h3>
           <ul>

@@ -1,11 +1,4 @@
-"""Traducteur juridique multilingue 100 % gratuit (Français <-> Éwé / Kabiyè).
-
-Combine 3 niveaux sans frais :
-1. Connecteur neuronal Google Translate GTX (100 % gratuit, SANS clé API) pour l'Éwé (code ISO 'ee').
-2. Connecteur Meta NLLB-200 (Hugging Face gratuit, optionnel via HF_API_KEY) pour l'Éwé ('ewe_Latn') et le Kabiyè ('kbp_Latn').
-3. Passe de traduction dédiée par LLM (Groq / Gemini gratuit) appuyée sur le glossaire juridique togolais,
-   avec préservation stricte des citations [1], [2] et de la mise en forme Markdown.
-"""
+"""Traducteur juridique multilingue 100 % gratuit (Français <-> Éwé / Kabiyè) avec préservation des citations."""
 from __future__ import annotations
 
 import json
@@ -16,46 +9,48 @@ import urllib.parse
 import urllib.request
 
 log = logging.getLogger("novissi.translator")
+CITE_RE = re.compile(r"\[(\d+)\]")
 
-CITE_PLACEHOLDER_RE = re.compile(r"\[(\d+)\]")
-
-# En-têtes et expressions fréquentes qui pourraient rester en français dans les réponses IA
 FR_TO_EWE_HEADERS = [
-    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**Nya vevitɔwo (Wò gomenɔamesiwo) :**"),
-    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**Nu si Togo ƒe se gblɔ :**"),
-    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**Nu si Togo ƒe se gblɔ :**"),
-    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**Nu si nàwɔ fifia (Afɔɖeɖewo) :**"),
-    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**Nu si nàwɔ fifia :**"),
-    (r"\*\*Que faire maintenant\s*\??\*\*", "**Nu si nàwɔ fifia :**"),
+    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**1. Nya vevitɔwo (Wò gomenɔamesiwo) :**"),
+    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Nu si Togo ƒe se gblɔ :**"),
+    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Nu si Togo ƒe se gblɔ :**"),
+    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Nu si nàwɔ fifia (Afɔɖeɖewo) :**"),
+    (r"3\.\s*Démarche concrète étape par étape[^\n]*", "### 3. Nu si nàwɔ fifia (Nu ɖe ɖeɖeɖe ɖi do ŋgɔ)"),
+    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Nu si nàwɔ fifia :**"),
+    (r"\*\*Que faire maintenant\s*\??\*\*", "**3. Nu si nàwɔ fifia :**"),
     (r"\bEn résumé\s*:", "Nya vevitɔwo :"),
     (r"\bCe que dit la loi\s*:", "Nu si se la gblɔ :"),
     (r"\bÀ faire maintenant\s*:", "Nu si nàwɔ fifia :"),
+    (r"\(Information générale,?\s*pas un avis d['’]avocat\.?\)", ""),
 ]
 
 FR_TO_KABIYE_HEADERS = [
-    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**Tɔm kɛdɩtʊ (Ñɔ-wahɩyɛ) :**"),
-    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**Togo paɣtʊ yɔɔdʊʊ se :**"),
-    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**Paɣtʊ yɔɔdʊʊ se :**"),
-    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
-    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
-    (r"\*\*Que faire maintenant\s*\??\*\*", "**Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
+    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**1. Tɔm kɛdɩtʊ (Ñɔ-wahɩyɛ) :**"),
+    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Togo paɣtʊ yɔɔdʊʊ se :**"),
+    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Paɣtʊ yɔɔdʊʊ se :**"),
+    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
+    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
+    (r"\*\*Que faire maintenant\s*\??\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
     (r"\bEn résumé\s*:", "Tɔm kɛdɩtʊ :"),
     (r"\bCe que dit la loi\s*:", "Paɣtʊ yɔɔdʊʊ se :"),
     (r"\bÀ faire maintenant\s*:", "Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :"),
+    (r"\(Information générale,?\s*pas un avis d['’]avocat\.?\)", ""),
+    (r"\(Inspection du travail\)", ""),
+    (r"\bavocat\b", "lɔŋ pasɩyʊ"),
+    (r"\bnotaire\b", "paɣtʊ takayaɣ mayʊ"),
 ]
 
 
 def replace_french_headers(text: str, lang: str) -> str:
-    """Remplace systématiquement les titres de sections français par leur équivalent Éwé ou Kabiyè."""
     pairs = FR_TO_EWE_HEADERS if lang == "Ewé" else (FR_TO_KABIYE_HEADERS if lang == "Kabiyè" else [])
     out = text
     for pattern, repl in pairs:
         out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
-    return out
+    return out.strip()
 
 
-def google_gtx_translate(text: str, sl: str = "fr", tl: str = "ee") -> str | None:
-    """Traduction neuronale 100 % gratuite et sans clé via le service Google Translate GTX (supporte l'Éwé 'ee')."""
+def google_gtx_translate(text: str, sl: str = "auto", tl: str = "ee") -> str | None:
     if not text.strip() or os.getenv("SCRAPER_ENABLED") == "0":
         return None
     if os.getenv("TRANSLATOR_GTX_ENABLED", "1") == "0":
@@ -80,7 +75,6 @@ def google_gtx_translate(text: str, sl: str = "fr", tl: str = "ee") -> str | Non
 
 
 def hf_nllb_translate(text: str, src_lang: str = "fra_Latn", tgt_lang: str = "ewe_Latn") -> str | None:
-    """Traduction optionnelle via Meta NLLB-200 sur Hugging Face (gratuit avec HF_API_KEY) pour Éwé (ewe_Latn) et Kabiyè (kbp_Latn)."""
     hf_key = os.getenv("HF_API_KEY", "").strip()
     if not hf_key or not text.strip() or os.getenv("SCRAPER_ENABLED") == "0":
         return None
@@ -105,7 +99,6 @@ def hf_nllb_translate(text: str, src_lang: str = "fra_Latn", tgt_lang: str = "ew
 
 
 def translate_user_query_to_fr(query: str, lang: str) -> str:
-    """Traduit une question posée en Éwé ou en Kabiyè vers le français pour que le moteur RAG trouve tous les articles."""
     if lang == "Ewé":
         tr = google_gtx_translate(query, sl="ee", tl="fr")
         if tr:
@@ -121,16 +114,36 @@ def translate_user_query_to_fr(query: str, lang: str) -> str:
 
 
 def _looks_mostly_french(text: str) -> bool:
-    """Détecte si un texte contient encore des phrases françaises non traduites."""
-    fr_markers = re.findall(
-        r"\b(vous|votre|vos|dans|avec|pour|selon|article|employeur|salarié|locataire|propriétaire|contrat|tribunal|décision|préavis|cependant|toutefois|ainsi)\b",
+    markers = re.findall(
+        r"\b(must|paid|within|after|month|stipule|paiement|intervenir|retard|manquement|autorise|obligatoires|procédure|saisit|licenciement|salaire|employeur|salarié|locataire|propriétaire|contrat|tribunal|décision|préavis|cependant|toutefois|ainsi|loi|droit|vous|votre|vos|dans|avec|pour|selon|article)\b",
         text.lower(),
     )
-    return len(fr_markers) >= 3
+    return len(markers) >= 2
+
+
+def _translate_preserving_structure(text: str, tl: str) -> str:
+    lines = text.splitlines()
+    out_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            out_lines.append("")
+            continue
+        cites = CITE_RE.findall(stripped)
+        prefix = ""
+        body = stripped
+        m = re.match(r"^(\s*(?:[-*•]|\d+\.)\s+|\s*#{1,4}\s+)", line)
+        if m:
+            prefix = m.group(1)
+            body = line[len(prefix):].strip()
+        tr = google_gtx_translate(body, sl="auto", tl=tl) or body
+        missing_cites = " ".join(f"[{c}]" for c in cites if f"[{c}]" not in tr)
+        final_line = f"{prefix}{tr} {missing_cites}".rstrip()
+        out_lines.append(final_line)
+    return "\n".join(out_lines)
 
 
 def ensure_target_language(text: str, lang: str, llm_fn=None, glossary_terms: dict | None = None) -> str:
-    """Garantit que 100 % de la réponse est en Éwé ou en Kabiyè tout en préservant les citations [1], [2]."""
     if lang == "Français" or not text.strip():
         return text
 
@@ -138,44 +151,36 @@ def ensure_target_language(text: str, lang: str, llm_fn=None, glossary_terms: di
     if os.getenv("SCRAPER_ENABLED") == "0":
         return cleaned
 
-    # Si le texte contient encore du français, on le traduit intégralement
-    if _looks_mostly_french(cleaned):
-        if lang == "Ewé":
-            gtx = google_gtx_translate(cleaned, sl="fr", tl="ee")
-            if gtx:
-                orig_cites = CITE_PLACEHOLDER_RE.findall(cleaned)
-                gtx_cites = CITE_PLACEHOLDER_RE.findall(gtx)
-                if set(orig_cites) <= set(gtx_cites):
-                    return replace_french_headers(gtx, lang)
-                missing = " ".join(f"[{c}]" for c in orig_cites if c not in gtx_cites)
-                return replace_french_headers(f"{gtx} {missing}".strip(), lang)
+    if _looks_mostly_french(cleaned) and llm_fn is not None:
+        try:
+            terms_hint = ""
+            if glossary_terms:
+                terms_hint = "\nLexique obligatoire :\n" + "\n".join(f"- {k} = {v}" for k, v in glossary_terms.items())
+            sys_tr = (
+                f"Tu es un traducteur juridique assermenté togolais spécialisé en {lang}. "
+                f"Traduis INTEGRALEMENT ce texte juridique en {lang} pur et fluide. "
+                "INTERDICTION ABSOLUE d'écrire en anglais ou de laisser des phrases en français. "
+                "Conserve les puces Markdown et conserve exactement les numéros entre crochets comme [1], [2]."
+                + terms_hint
+            )
+            tr_llm = llm_fn(sys_tr, cleaned, max_tokens=1500)
+            orig_cites = CITE_RE.findall(cleaned)
+            new_cites = CITE_RE.findall(tr_llm)
+            missing = " ".join(f"[{c}]" for c in orig_cites if c not in new_cites)
+            cleaned = replace_french_headers(f"{tr_llm} {missing}".strip(), lang)
+        except Exception:
+            pass
 
-        if lang == "Kabiyè":
-            nllb = hf_nllb_translate(cleaned, src_lang="fra_Latn", tgt_lang="kbp_Latn")
-            if nllb:
-                orig_cites = CITE_PLACEHOLDER_RE.findall(cleaned)
-                nllb_cites = CITE_PLACEHOLDER_RE.findall(nllb)
-                missing = " ".join(f"[{c}]" for c in orig_cites if c not in nllb_cites)
-                return replace_french_headers(f"{nllb} {missing}".strip(), lang)
+    if lang == "Ewé" and _looks_mostly_french(cleaned):
+        cleaned = _translate_preserving_structure(cleaned, tl="ee")
+        cleaned = replace_french_headers(cleaned, lang)
 
-        # Repli sur une passe de traduction stricte par le LLM (Groq / Gemini)
-        if llm_fn is not None:
-            try:
-                terms_hint = ""
-                if glossary_terms:
-                    terms_hint = "\nVocabulaire obligatoire :\n" + "\n".join(f"- {k} = {v}" for k, v in glossary_terms.items())
-                sys_tr = (
-                    f"Tu es un traducteur professionnel assermenté du français vers le {lang} (Togo). "
-                    f"Traduis INTEGRALEMENT le texte suivant en {lang}. "
-                    "Ne laisse AUCUNE phrase en français. Conserve exactement les balises de citation entre crochets comme [1], [2]."
-                    + terms_hint
-                )
-                tr_llm = llm_fn(sys_tr, cleaned, max_tokens=1400)
-                orig_cites = set(CITE_PLACEHOLDER_RE.findall(cleaned))
-                new_cites = set(CITE_PLACEHOLDER_RE.findall(tr_llm))
-                if orig_cites <= new_cites:
-                    return replace_french_headers(tr_llm, lang)
-            except Exception:
-                pass
+    if lang == "Kabiyè" and _looks_mostly_french(cleaned):
+        nllb = hf_nllb_translate(cleaned, src_lang="fra_Latn", tgt_lang="kbp_Latn")
+        if nllb:
+            orig_cites = CITE_RE.findall(cleaned)
+            nllb_cites = CITE_RE.findall(nllb)
+            missing = " ".join(f"[{c}]" for c in orig_cites if c not in nllb_cites)
+            cleaned = replace_french_headers(f"{nllb} {missing}".strip(), lang)
 
     return cleaned
