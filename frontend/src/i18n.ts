@@ -357,14 +357,14 @@ export const I18N: Record<Lang, UI> = {
     letterOppFoncier: "Tsitre ɖe anyigba ŋlɔŋlɔ ɖe ame bubu ŋkɔ me (OTR)",
     letterEtatDescriptif: "Bia anyigba ƒe nɔnɔme nyateƒe (Cadastre)",
     letterMiseDemeureVendeur: "Bia Titre Foncier / Tampons 3 tso nudzrala gbɔ",
-    letterPlainte: "Nyadzɔdzɔ (Plainte) ɖe ame aɖe ŋu le ʋɔnudrɔ̃ƒe",
+    letterPlainte: "Nyadzɔdzɔ (Plainte) ɖe ame a drabuu ŋu le ʋɔnudrɔ̃ƒe",
     letterDette: "Bia wò fe si wodu",
     fullName: "Wò ŋkɔ blibo",
     yourAddress: "Nɔƒewò (Adresse)",
     employer: "Dɔwɔtɔ (Employeur)",
     landlord: "Aƒetɔ (Propriétaire)",
-    destLabelOtr: "OTR ƒe amegã",
-    destLabelProc: "Ame si ŋu nèfo nya ɖo alo Ʋɔnudrɔ̃ƒe",
+    destLabelOtr: "OTR amegã",
+    destLabelProc: "Ʋɔnudrɔ̃ƒe alo amefuna",
     destLabelVendeur: "Nudzrala",
     destLabelDebiteur: "Fenyila",
     city: "Du (Ville)",
@@ -589,7 +589,7 @@ const CHECK_TRANSLATIONS: Record<string, { Ewé: string; Kabiyè: string }> = {
   },
 };
 
-export function translateCheckLabel(label: string, lang: Lang): string {
+export function translateCheckLevel(label: string, lang: Lang): string {
   if (lang === "Français") return label;
   return CHECK_TRANSLATIONS[label]?.[lang] || label;
 }
