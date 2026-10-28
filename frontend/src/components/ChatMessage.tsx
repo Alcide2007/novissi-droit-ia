@@ -30,8 +30,9 @@ export default function ChatMessage({ m, lang = "Français" }: { m: Msg; lang?: 
   }, []);
 
   function toggleSpeech() {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      window.alert("La lecture vocale n'est pas disponible sur ce navigateur.");
+    if (typeof window === "undefined") return;
+    if (!("speechSynthesis" in window)) {
+      alert("La lecture vocale n'est pas disponible sur ce navigateur.");
       return;
     }
     if (speaking) {
@@ -76,7 +77,7 @@ export default function ChatMessage({ m, lang = "Français" }: { m: Msg; lang?: 
               type="button"
               className={"chip tts-btn" + (speaking ? " active-tts" : "")}
               onClick={toggleSpeech}
-              aria-label={speaking ? "Arrêter la lecture vocale" : "Écouter la réponse"}
+              aria-label={speaking ? ui.stopListening : ui.listenResponse}
               title={speaking ? ui.stopListening : ui.listenResponse}
             >
               {speaking ? <IconStop size={15} /> : <IconVolume size={15} />}

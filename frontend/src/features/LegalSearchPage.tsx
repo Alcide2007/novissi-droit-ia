@@ -16,13 +16,13 @@ export default function LegalSearchPage() {
   const [err, setErr] = useState("");
   const [status, setStatus] = useState<CollectionStatus | null>(null);
 
-  useEffect(() => { api.collectionStatus().then(setStatus).catch(() => setStatus(null)); }, []);
+  useEffect(() => { api.legalStatus().then(setStatus).catch(() => setStatus(null)); }, []);
 
   async function search(e?: React.FormEvent) {
     e?.preventDefault();
     if (q.trim().length < 2 || busy) return;
     setBusy(true); setErr("");
-    try { const r = await api.legalSearch(q.trim(), source); setHits(r.hits); setNote(r.note); }
+    try { const r = await api.searchLegal(q.trim(), source); setHits(r.hits); setNote(r.note); }
     catch (x) { setErr((x as Error).message); setHits(null); }
     finally { setBusy(false); }
   }
