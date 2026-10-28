@@ -179,9 +179,12 @@ async def _rate_limited(request: Request, exc: RateLimitExceeded):
     from fastapi.responses import JSONResponse
     return JSONResponse({"detail": "Trop de requêtes. Réessayez dans une minute."}, status_code=429)
 
-
-app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173").split(","),
-                   allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
 XAI_BASE = "https://api.x.ai/v1"
