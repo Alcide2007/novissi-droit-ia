@@ -107,7 +107,7 @@ export default function App() {
         onToggleCollapse={toggleCollapse}
         lang={lang}
       />
-      {menu && <div className="scrim" onClick={() => setMenu(false)} />}
+      {menu && <div className="scrim open" onClick={() => setMenu(false)} />}
       <main className="main">
         <div className="topbar">
           <button type="button" className="icon burger" onClick={() => setMenu(true)} aria-label="Ouvrir le menu">

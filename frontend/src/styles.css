@@ -382,3 +382,156 @@ a.btn,a.chip,.no-underline{text-decoration:none!important}
     border-radius: 10px;
   }
 }
+
+
+@media (max-width: 768px) {
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .shell {
+    display: flex;
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+    position: relative;
+  }
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px !important;
+    max-width: 85vw;
+    z-index: 9999 !important;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease-in-out;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+  .scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 8888 !important;
+  }
+  .scrim.open, div.scrim {
+    display: block;
+  }
+  .main {
+    flex: 1;
+    width: 100vw;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    padding: 8px 12px;
+    gap: 8px;
+    min-height: 52px;
+    flex: none;
+  }
+  .topbar h1 {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .topbar-lang {
+    font-size: 12px;
+    padding: 4px 6px;
+    max-width: 80px;
+  }
+  .share-btn span {
+    display: none;
+  }
+  .burger, .close {
+    display: inline-flex !important;
+  }
+  .chat-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .chat-toolbar .chip {
+    justify-content: center;
+    width: 100%;
+  }
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .composer-wrap {
+    flex: none;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  .composer {
+    padding: 6px 8px;
+    border-radius: 20px;
+    gap: 4px;
+  }
+  .composer textarea {
+    padding: 6px;
+    max-height: 120px;
+  }
+  .hero {
+    margin: 2vh auto 12px;
+    padding: 0 10px;
+  }
+  .hero h2 {
+    font-size: 17px;
+    margin-bottom: 12px;
+  }
+  .suggest, .grid2, .two {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .card {
+    min-height: auto;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .bubble {
+    max-width: 92%;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+  .page {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 10px 30px;
+  }
+  .panel {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+  .letter-paper {
+    padding: 12px 10px;
+    font-size: 11.5px;
+  }
+  .map {
+    height: 240px;
+    border-radius: 10px;
+  }
+}
