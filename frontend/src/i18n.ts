@@ -407,12 +407,6 @@ export const I18N: Record<Lang, UI> = {
     tamponsMissing: "Meli o (Afɔku gã)",
     tamponsPending: "Wole edzrom le Cadastre",
     scoreLabels: { vert: "nyui (vert)", orange: "nudodokpɔ (orange)", rouge: "afɔku (rouge)" },
-    destLabelOtr: "OTR amegã",
-    destLabelProc: "Ʋɔnudrɔ̃ƒe alo amefuna",
-    destLabelVendeur: "Nudzrala",
-    destLabelDebiteur: "Fenyila",
-    telTogo: "Kaƒoƒo (Togo)",
-    parcelRef: "Anyigba ƒe xexlẽdzesi (TF, Lot, OTR)",
   },
   Kabiyè: {
     slogan: "Samaɣ yɔɔ kandɩyʊ",
@@ -549,12 +543,6 @@ export const I18N: Record<Lang, UI> = {
     tamponsMissing: "Pɩfɛyɩ (Kʊñɔŋ)",
     tamponsPending: "Pɩlakɩ tʊmɩyɛ Cadastre",
     scoreLabels: { vert: "ɖeu (vert)", orange: "cɔnaʊ (orange)", rouge: "kʊñɔŋ (rouge)" },
-    destLabelOtr: "OTR ñʊʊ",
-    destLabelProc: "Ʋɔnudrɔ̃ƒe",
-    destLabelVendeur: "Tɛtʊ pɛdɩyʊ",
-    destLabelDebiteur: "Fenyila",
-    telTogo: "Telefon (Togo)",
-    parcelRef: "Tɛtʊ ñʊʊ (TF, Lot, OTR)",
   },
 };
 

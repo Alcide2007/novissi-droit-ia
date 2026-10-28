@@ -3,7 +3,7 @@ import L from "leaflet";
 import * as api from "../api";
 import type { Lang, Score } from "../api";
 import { IconActe, IconAlert, IconCalendar, IconCheck, IconClock, IconMapPin, IconNavigation } from "../components/Icons";
-import { t, translateAdvice, translateCheckLabel } from "../i18n";
+import { t, translateAdvice, translateCheckLevel } from "../i18n";
 
 const COULEUR: Record<Score, string> = { vert: "#2E8B57", orange: "#D9822B", rouge: "#C0392B" };
 
@@ -167,7 +167,7 @@ export default function TerraCheckPage({ focus, onDecodeParcel, lang = "Françai
                 {sel.checks.map((c) => (
                   <li key={c.label} className="check-row">
                     {c.ok ? <IconCheck size={16} className="ic-ok" /> : <IconAlert size={16} className="ic-warn" />}
-                    <span>{translateCheckLabel(c.label, lang)}</span>
+                    <span>{translateCheckLevel(c.label, lang)}</span>
                   </li>
                 ))}
               </ul>
