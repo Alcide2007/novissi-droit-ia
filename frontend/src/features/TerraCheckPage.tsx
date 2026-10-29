@@ -29,6 +29,7 @@ export default function TerraCheckPage({ focus, onDecodeParcel, lang = "Françai
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(m);
     layer.current = L.layerGroup().addTo(m);
     map.current = m;
+    setTimeout(() => m.invalidateSize(), 200);
     api.parcels().then((data) => {
       setList(data);
       if (!focus && data.length > 0) setSel(data[0]);
