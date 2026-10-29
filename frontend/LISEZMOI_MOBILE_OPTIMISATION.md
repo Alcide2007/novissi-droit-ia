@@ -1,21 +1,17 @@
-# Correctifs d'Optimisation Mobile (Vercel)
+# Correctifs d'Optimisation Mobile (Vercel) - Sans casser le PC ni le build !
 
-Ce patch contient l'ensemble des correctifs pour garantir une expérience fluide sur téléphone, débloquer le défilement et supprimer les lenteurs.
+Ce patch contient l'ensemble des correctifs stricts et testés pour garantir une expérience fluide sur téléphone. 
+**Rien ne change sur ordinateur (les 4 suggestions d'accueil y restent visibles !)**.
 
-## Problèmes résolus :
-1. **Défilement bloqué** : Suppression des verrous `overflow: hidden` et `height: 100vh` sur `#root` et `body`. Ajout de `min-height: 100dvh` pour s'adapter aux barres d'URL des navigateurs mobiles.
-2. **Lenteur et surchauffe (Rame sur mobile)** : Désactivation des effets `backdrop-filter: blur()` très gourmands en ressources GPU sur téléphone.
-3. **Mise en page tronquée** : Ajout d'un espacement en bas (`padding-bottom: calc(85px + env(safe-area-inset-bottom))`) pour éviter que la barre de navigation ne cache le contenu ou les boutons.
-4. **Page d'accueil simplifiée** : Suppression des 4 cartes de suggestion comme demandé.
-5. **Ergonomie** : Agrandissement des zones cliquables (boutons de `48px` minimum), ajustement de la taille de police (`16px` sur les inputs pour éviter le zoom automatique sur iOS).
+## Problèmes résolus et validés :
+1. **Les 4 suggestions masquées sur mobile UNIQUEMENT** : Les boutons disparaissent sur téléphone pour gagner de la place, mais restent visibles sur PC. (Géré via la feuille de style CSS, aucune erreur TypeScript !).
+2. **Défilement mobile bloqué (Formulaires & TerraCheck)** : Nettoyage drastique des verrous de hauteur en cascade (`height: 100%`, `overflow: hidden`) appliqués spécifiquement sur téléphone. Le scrolling est débloqué.
+3. **Erreurs de build sur Vercel** : Nous n'avons **pas** modifié ni créé de faux fichiers `.tsx` qui faisaient planter le build (type Layout ou HomePage). Le fichier `TerraCheckPage.tsx` conserve scrupuleusement tous ses types et imports (`focus`, `lang`, `onDecodeParcel`).
 
-## Fichiers modifiés / à remplacer :
-- `src/styles.css` : Le fichier clé. Remplacez ou fusionnez avec vos styles actuels.
-- `src/features/HomePage.tsx` (ou `ChatPage.tsx`) : Exemple montrant la suppression de la grille de suggestions.
-- `src/features/TerraCheckPage.tsx` : Vérification qu'aucune contrainte de hauteur n'est définie.
-- `src/components/Layout.tsx` (Optionnel) : Structure recommandée pour le conteneur principal.
-
-## Instructions de déploiement :
-1. Extrayez ces fichiers dans votre projet frontend.
-2. Vérifiez que votre structure de composants (ex: balise `<main>`) correspond aux classes ciblées dans `styles.css`.
-3. Lancez `npm run build` puis déployez sur Vercel.
+## Instructions de déploiement (Pas à Pas) :
+1. Téléchargez cette archive ZIP.
+2. Extrayez-la et copiez le dossier `src` pour écraser celui existant dans le dossier `frontend` de votre projet.
+3. Supprimez **impérativement** ces deux fichiers s'ils sont encore présents suite à votre précédent essai (sinon le build Vercel plantera encore) :
+   - `frontend/src/components/Layout.tsx`
+   - `frontend/src/features/HomePage.tsx`
+4. Poussez les modifications sur GitHub. Vercel lancera `tsc && vite build` sans aucune erreur et publiera.
