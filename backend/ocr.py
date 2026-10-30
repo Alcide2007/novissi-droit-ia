@@ -219,8 +219,7 @@ def _ocr_with_ocrspace_fallback(image_bytes: bytes, lang: str = "fre") -> str:
             payload = resp.json()
             parsed = payload.get("ParsedResults") or []
             if parsed:
-                txt = "
-".join(p.get("ParsedText", "") for p in parsed).strip()
+                txt = "\n".join(p.get("ParsedText", "") for p in parsed).strip()
                 if txt:
                     return txt
     except Exception as exc:
@@ -238,12 +237,9 @@ def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
                 t = (page.get_text("text") or "").strip()
                 if t:
                     parts.append(t)
-            text = "
-
-".join(parts).strip()
+            text = "\n\n".join(parts).strip()
             if len(text) >= 30:
                 return text
-            # Si le PDF est un scan image sans couche texte, on convertit la 1re page en image et on lance l'OCR !
             if len(doc) > 0:
                 pix = doc[0].get_pixmap(dpi=180)
                 img_bytes = pix.tobytes("jpeg")
@@ -256,9 +252,7 @@ def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
             reader = PdfReader(io.BytesIO(pdf_bytes), strict=False)
             for page in reader.pages[:20]:
                 parts.append(page.extract_text() or "")
-            return "
-
-".join(parts).strip()
+            return "\n\n".join(parts).strip()
         except Exception as exc:
             log.warning("pypdf lecture PDF échouée : %s", exc)
     return ""
@@ -300,7 +294,6 @@ def extract_text_from_bytes(
     return ""
 
 
-# Alias rétro-compatibles avec toutes les signatures possibles de `backend/main.py`
 def extract_text(file_or_bytes: Any, filename: str = "", content_type: str = "", lang: str = "fra") -> dict[str, Any] | str:
     """Compatible à la fois avec un appel qui attend une string ou un dict."""
     if isinstance(file_or_bytes, (bytes, bytearray)):
