@@ -1,186 +1,223 @@
-"""Traducteur juridique multilingue 100 % gratuit (Français <-> Éwé / Kabiyè) avec préservation des citations."""
+"""
+Module de traduction & Pont Lexical (Français <-> Éwé / Kabiyè) — Version corrigée anti-boucles.
+Corrige les bugs de répétition infinie ("ɖe ɖe ɖe...", "ɖokui le nu vɔ̃ le...") générés par
+le traducteur neuronal ou le LLM sur les structures Markdown et les termes juridiques.
+"""
 from __future__ import annotations
 
-import json
-import logging
-import os
 import re
 import urllib.parse
-import urllib.request
+import requests
 
-log = logging.getLogger("novissi.translator")
-CITE_RE = re.compile(r"\[(\d+)\]")
+# Glossaire de pont lexical : Langues locales (Éwé / Kabiyè) -> Mots-clés RAG Français
+LEXICAL_BRIDGE_TO_FR: dict[str, str] = {
+    # Éwé
+    "fetu": "salaire rémunération paiement employeur code du travail",
+    "dɔwɔtɔ": "employeur patron contrat de travail licenciement",
+    "dɔwɔla": "travailleur salarié employé",
+    "xɔhaya": "loyer bail d'habitation locataire propriétaire caution",
+    "aƒetɔ": "propriétaire bailleur expulsion préavis",
+    "anyigba": "terrain parcelle foncier titre foncier cadastre OTR lotissement",
+    "agbalẽ": "acte contrat document titre foncier",
+    "fe": "dette créance remboursement mise en demeure",
+    "ʋɔnudrɔ̃ƒe": "tribunal justice plainte procureur",
+    # Kabiyè
+    "liidiye": "salaire paiement caution argent dette",
+    "tʊmɩyɛ": "travail emploi contrat licenciement code du travail",
+    "ɖɩɣa": "logement maison bail loyer locataire propriétaire expulsion",
+    "tɛtʊ": "terrain parcelle foncier titre foncier cadastre OTR",
+    "takayaɣ": "acte contrat titre document",
+    "kɩmɩyɛ": "dette créance remboursement",
+    "tɔm": "litige plainte tribunal justice",
+}
 
-FR_TO_EWE_HEADERS = [
-    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**1. Nya vevitɔwo (Wò gomenɔamesiwo) :**"),
-    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Nu si Togo ƒe se gblɔ :**"),
-    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Nu si Togo ƒe se gblɔ :**"),
-    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Nu si nàwɔ fifia (Afɔɖeɖewo) :**"),
-    (r"3\.\s*Démarche concrète étape par étape[^\n]*", "### 3. Nu si nàwɔ fifia (Nu ɖe ɖeɖeɖe ɖi do ŋgɔ)"),
-    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Nu si nàwɔ fifia :**"),
-    (r"\*\*Que faire maintenant\s*\??\*\*", "**3. Nu si nàwɔ fifia :**"),
-    (r"\bEn résumé\s*:", "Nya vevitɔwo :"),
-    (r"\bCe que dit la loi\s*:", "Nu si se la gblɔ :"),
-    (r"\bÀ faire maintenant\s*:", "Nu si nàwɔ fifia :"),
-    (r"\(Information générale,?\s*pas un avis d['’]avocat\.?\)", ""),
-]
+# Termes juridiques officiels à protéger en français ou à traduire proprement
+LEGAL_GLOSSARY_EWE: dict[str, str] = {
+    "Titre Foncier": "Titre Foncier (Anyigbagbalẽ gã)",
+    "OTR": "OTR (Cadastre)",
+    "3 tampons": "3 Tampons (Kpeɖodzi 3)",
+    "mise en demeure": "mise en demeure (nudodo ɖe ame dzi)",
+    "préavis": "préavis (gbeɖeɖe ɖi)",
+}
 
-FR_TO_KABIYE_HEADERS = [
-    (r"\*\*En résumé\s*(?:\([^)]*\))?\s*:?\*\*", "**1. Tɔm kɛdɩtʊ (Ñɔ-wahɩyɛ) :**"),
-    (r"\*\*Ce que dit le droit togolais\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Togo paɣtʊ yɔɔdʊʊ se :**"),
-    (r"\*\*Ce que dit la loi\s*(?:\([^)]*\))?\s*:?\*\*", "**2. Paɣtʊ yɔɔdʊʊ se :**"),
-    (r"\*\*Démarche concrète étape par étape\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
-    (r"\*\*À faire maintenant\s*(?:\([^)]*\))?\s*:?\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
-    (r"\*\*Que faire maintenant\s*\??\*\*", "**3. Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :**"),
-    (r"\bEn résumé\s*:", "Tɔm kɛdɩtʊ :"),
-    (r"\bCe que dit la loi\s*:", "Paɣtʊ yɔɔdʊʊ se :"),
-    (r"\bÀ faire maintenant\s*:", "Mbʊ pʊwɛɛ se na-la lɛɛlɛɛyɔ :"),
-    (r"\(Information générale,?\s*pas un avis d['’]avocat\.?\)", ""),
-    (r"\(Inspection du travail\)", ""),
-    (r"\bavocat\b", "lɔŋ pasɩyʊ"),
-    (r"\bnotaire\b", "paɣtʊ takayaɣ mayʊ"),
-]
-
-
-def replace_french_headers(text: str, lang: str) -> str:
-    pairs = FR_TO_EWE_HEADERS if lang == "Ewé" else (FR_TO_KABIYE_HEADERS if lang == "Kabiyè" else [])
-    out = text
-    for pattern, repl in pairs:
-        out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
-    return out.strip()
+LEGAL_GLOSSARY_KABIYE: dict[str, str] = {
+    "Titre Foncier": "Titre Foncier (Tɛtʊ takayaɣ sɔsɔɣa)",
+    "OTR": "OTR (Cadastre)",
+    "3 tampons": "3 Tampons",
+    "mise en demeure": "mise en demeure",
+    "préavis": "préavis",
+}
 
 
-def google_gtx_translate(text: str, sl: str = "auto", tl: str = "ee") -> str | None:
-    if not text.strip() or os.getenv("SCRAPER_ENABLED") == "0":
-        return None
-    if os.getenv("TRANSLATOR_GTX_ENABLED", "1") == "0":
-        return None
-    try:
-        qs = urllib.parse.urlencode({"client": "gtx", "sl": sl, "tl": tl, "dt": "t", "q": text})
-        req = urllib.request.Request(
-            f"https://translate.googleapis.com/translate_a/single?{qs}",
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
-        with urllib.request.urlopen(req, timeout=10.0) as resp:
-            if resp.status != 200:
-                return None
-            data = json.loads(resp.read().decode("utf-8"))
-        if not isinstance(data, list) or not data or not isinstance(data[0], list):
-            return None
-        translated = "".join(seg[0] for seg in data[0] if isinstance(seg, list) and seg and seg[0])
-        return translated.strip() or None
-    except Exception as e:
-        log.debug("GTX translate indisponible : %s", type(e).__name__)
-        return None
+def dedupe_repetitions(text: str) -> str:
+    """
+    Supprime les boucles d'hallucination NMT/LLM en Éwé et Kabiyè :
+    - Répétitions d'un même mot ("ɖe ɖe ɖe ɖe..." -> "ɖe")
+    - Répétitions de groupes de mots ("ɖokui le nu vɔ̃ le ɖokui le nu vɔ̃ le..." -> 1 seule fois)
+    """
+    if not text:
+        return text
 
-
-def hf_nllb_translate(text: str, src_lang: str = "fra_Latn", tgt_lang: str = "ewe_Latn") -> str | None:
-    hf_key = os.getenv("HF_API_KEY", "").strip()
-    if not hf_key or not text.strip() or os.getenv("SCRAPER_ENABLED") == "0":
-        return None
-    model = os.getenv("HF_NLLB_MODEL", "facebook/nllb-200-distilled-600M")
-    try:
-        body = json.dumps({"inputs": text[:1500], "parameters": {"src_lang": src_lang, "tgt_lang": tgt_lang}}).encode("utf-8")
-        req = urllib.request.Request(
-            f"https://api-inference.huggingface.co/models/{model}",
-            data=body,
-            headers={"Authorization": f"Bearer {hf_key}", "Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=20.0) as resp:
-            if resp.status != 200:
-                return None
-            data = json.loads(resp.read().decode("utf-8"))
-        if isinstance(data, list) and data and isinstance(data[0], dict):
-            return (data[0].get("translation_text") or "").strip() or None
-    except Exception as e:
-        log.debug("HF NLLB indisponible : %s", type(e).__name__)
-    return None
-
-
-def translate_user_query_to_fr(query: str, lang: str) -> str:
-    if lang == "Ewé":
-        tr = google_gtx_translate(query, sl="ee", tl="fr")
-        if tr:
-            return f"{query} {tr}"
-        tr_hf = hf_nllb_translate(query, src_lang="ewe_Latn", tgt_lang="fra_Latn")
-        if tr_hf:
-            return f"{query} {tr_hf}"
-    elif lang == "Kabiyè":
-        tr_hf = hf_nllb_translate(query, src_lang="kbp_Latn", tgt_lang="fra_Latn")
-        if tr_hf:
-            return f"{query} {tr_hf}"
-    return query
-
-
-def _looks_mostly_french(text: str) -> bool:
-    markers = re.findall(
-        r"\b(must|paid|within|after|month|stipule|paiement|intervenir|retard|manquement|autorise|obligatoires|procédure|saisit|licenciement|salaire|employeur|salarié|locataire|propriétaire|contrat|tribunal|décision|préavis|cependant|toutefois|ainsi|loi|droit|vous|votre|vos|dans|avec|pour|selon|article)\b",
-        text.lower(),
-    )
-    return len(markers) >= 2
-
-
-def _translate_preserving_structure(text: str, tl: str) -> str:
-    lines = text.splitlines()
+    lines = text.split("\n")
     out_lines: list[str] = []
+
     for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            out_lines.append("")
-            continue
-        cites = CITE_RE.findall(stripped)
-        prefix = ""
-        body = stripped
-        m = re.match(r"^(\s*(?:[-*•]|\d+\.)\s+|\s*#{1,4}\s+)", line)
-        if m:
-            prefix = m.group(1)
-            body = line[len(prefix):].strip()
-        tr = google_gtx_translate(body, sl="auto", tl=tl) or body
-        missing_cites = " ".join(f"[{c}]" for c in cites if f"[{c}]" not in tr)
-        final_line = f"{prefix}{tr} {missing_cites}".rstrip()
-        out_lines.append(final_line)
+        words = line.split(" ")
+        for _pass in range(3):
+            for n in range(15, 0, -1):
+                i = 0
+                new_words: list[str] = []
+                while i < len(words):
+                    chunk = words[i : i + n]
+                    if len(chunk) == n and i + 2 * n <= len(words):
+                        reps = 1
+                        chunk_lower = [w.lower() for w in chunk]
+                        while (
+                            i + (reps + 1) * n <= len(words)
+                            and [w.lower() for w in words[i + reps * n : i + (reps + 1) * n]]
+                            == chunk_lower
+                        ):
+                            reps += 1
+                        if (n >= 3 and reps >= 2) or (n < 3 and reps >= 3):
+                            new_words.extend(chunk)
+                            i += reps * n
+                            # Absorbe aussi une queue partielle de la même boucle en fin de ligne
+                            rem = len(words) - i
+                            if (
+                                n >= 4
+                                and 3 <= rem < n
+                                and [w.lower() for w in words[i : i + rem]] == chunk_lower[:rem]
+                            ):
+                                i += rem
+                            continue
+                    new_words.append(words[i])
+                    i += 1
+                words = new_words
+        cleaned_line = " ".join(words)
+        # Nettoyage regex supplémentaire pour les bégaiements de syllabes collées
+        cleaned_line = re.sub(r"\b(\w+)(?:\s+\1){2,}\b", r"\1", cleaned_line, flags=re.IGNORECASE)
+        out_lines.append(cleaned_line)
+
     return "\n".join(out_lines)
 
 
-def ensure_target_language(text: str, lang: str, llm_fn=None, glossary_terms: dict | None = None) -> str:
-    if lang == "Français" or not text.strip():
+def enrich_query_for_rag(query: str, lang: str = "Français") -> str:
+    """
+    Convertit ou enrichit une question posée en Éwé ou Kabiyè vers le français
+    pour que le moteur RAG trouve toujours les bons articles de loi togolais.
+    """
+    if not query or lang == "Français":
+        return query
+
+    q_lower = query.lower()
+    extra_keywords: list[str] = []
+    for local_word, fr_terms in LEXICAL_BRIDGE_TO_FR.items():
+        if local_word in q_lower:
+            extra_keywords.append(fr_terms)
+
+    # Tentative de traduction vers le français via GTX si c'est de l'Éwé
+    translated_fr = ""
+    if lang in ("Ewé", "Kabiyè"):
+        src_code = "ee" if lang == "Ewé" else "auto"
+        translated_fr = _gtx_translate_chunk(query, src=src_code, dest="fr")
+
+    parts = [query]
+    if translated_fr and translated_fr.lower() != q_lower:
+        parts.append(translated_fr)
+    if extra_keywords:
+        parts.append(" ".join(extra_keywords))
+    return " ".join(parts)
+
+
+def _gtx_translate_chunk(text: str, src: str = "fr", dest: str = "ee") -> str:
+    """Traduit un segment court (une seule ligne propre sans Markdown complexe) via Google GTX."""
+    clean = text.strip()
+    if not clean:
         return text
+    try:
+        url = (
+            "https://translate.googleapis.com/translate_a/single"
+            f"?client=gtx&sl={src}&tl={dest}&dt=t&q={urllib.parse.quote(clean)}"
+        )
+        resp = requests.get(url, timeout=6)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, list) and data and isinstance(data[0], list):
+                out = "".join(seg[0] for seg in data[0] if seg and seg[0])
+                return dedupe_repetitions(out)
+    except Exception:
+        pass
+    return text
 
-    cleaned = replace_french_headers(text, lang)
-    if os.getenv("SCRAPER_ENABLED") == "0":
-        return cleaned
 
-    if _looks_mostly_french(cleaned) and llm_fn is not None:
-        try:
-            terms_hint = ""
-            if glossary_terms:
-                terms_hint = "\nLexique obligatoire :\n" + "\n".join(f"- {k} = {v}" for k, v in glossary_terms.items())
-            sys_tr = (
-                f"Tu es un traducteur juridique assermenté togolais spécialisé en {lang}. "
-                f"Traduis INTEGRALEMENT ce texte juridique en {lang} pur et fluide. "
-                "INTERDICTION ABSOLUE d'écrire en anglais ou de laisser des phrases en français. "
-                "Conserve les puces Markdown et conserve exactement les numéros entre crochets comme [1], [2]."
-                + terms_hint
-            )
-            tr_llm = llm_fn(sys_tr, cleaned, max_tokens=1500)
-            orig_cites = CITE_RE.findall(cleaned)
-            new_cites = CITE_RE.findall(tr_llm)
-            missing = " ".join(f"[{c}]" for c in orig_cites if c not in new_cites)
-            cleaned = replace_french_headers(f"{tr_llm} {missing}".strip(), lang)
-        except Exception:
-            pass
+def translate_response(text_fr: str, lang: str = "Français") -> str:
+    """
+    Traduit une réponse juridique structurée du français vers l'Éwé ou le Kabiyè :
+    1. Protège les balises Markdown (**, listes, numéros) et les citations [1], [2]
+       AVANT la traduction pour éviter que le moteur neuronal ne boucle dessus.
+    2. Traduit phrase par phrase (segments courts < 250 caractères).
+    3. Applique le filtre anti-boucles `dedupe_repetitions` sur chaque sortie.
+    """
+    if not text_fr or lang == "Français":
+        return text_fr
 
-    if lang == "Ewé" and _looks_mostly_french(cleaned):
-        cleaned = _translate_preserving_structure(cleaned, tl="ee")
-        cleaned = replace_french_headers(cleaned, lang)
+    # Si le texte a déjà été généré en langue locale par le LLM, on le nettoie simplement
+    if lang == "Kabiyè":
+        # Google GTX ne supporte pas nativement le code ISO 'kbp' (Kabiyè) :
+        # si le LLM a répondu en Kabiyè ou en Français, on nettoie toute boucle éventuelle
+        return dedupe_repetitions(text_fr)
 
-    if lang == "Kabiyè" and _looks_mostly_french(cleaned):
-        nllb = hf_nllb_translate(cleaned, src_lang="fra_Latn", tgt_lang="kbp_Latn")
-        if nllb:
-            orig_cites = CITE_RE.findall(cleaned)
-            nllb_cites = CITE_RE.findall(nllb)
-            missing = " ".join(f"[{c}]" for c in orig_cites if c not in nllb_cites)
-            cleaned = replace_french_headers(f"{nllb} {missing}".strip(), lang)
+    # Pour l'Éwé ('ee') : traduction ligne par ligne en isolant le Markdown et les citations [n]
+    lines = text_fr.split("\n")
+    translated_lines: list[str] = []
 
-    return cleaned
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            translated_lines.append("")
+            continue
+
+        # Isoler les puces ou numéros en début de ligne (ex: "• ", "- ", "1. ", "### ")
+        prefix_match = re.match(r"^(\s*(?:[•\-*]|\d+\.|#{1,4})\s+)", line)
+        prefix = prefix_match.group(1) if prefix_match else ""
+        content = line[len(prefix) :] if prefix_match else line
+
+        # Extraire et protéger les citations [1], [2] en fin ou milieu de phrase
+        citations: list[str] = []
+        def _save_cit(m: re.Match) -> str:
+            citations.append(m.group(0))
+            return f" __CIT{len(citations)-1}__ "
+
+        content_no_cit = re.sub(r"\[\d+\]", _save_cit, content)
+        # Retirer les étoiles Markdown ** avant d'envoyer à GTX (principale cause du bug "**Kpɔkplɛ ɖe ɖe ɖe...")
+        had_bold = "**" in content_no_cit
+        clean_content = content_no_cit.replace("**", "").strip()
+
+        # Si la ligne est déjà en Éwé (contient ɖ, ƒ, ɣ, ɔ, ɛ), on la dé-boucle sans la retraduire
+        if any(ch in clean_content for ch in ("ɖ", "ƒ", "ɣ", "ʋ")):
+            trans = dedupe_repetitions(clean_content)
+        else:
+            trans = _gtx_translate_chunk(clean_content, src="fr", dest="ee")
+            trans = dedupe_repetitions(trans)
+
+        # Restaurer les citations [1], [2]
+        for idx, cit in enumerate(citations):
+            trans = re.sub(rf"\s*__CIT{idx}__\s*", f" {cit} ", trans, flags=re.IGNORECASE)
+
+        trans = re.sub(r"\s{2,}", " ", trans).strip()
+        if had_bold and ":" in trans:
+            head, rest = trans.split(":", 1)
+            trans = f"**{head.strip()} :** {rest.strip()}"
+
+        translated_lines.append(f"{prefix}{trans}")
+
+    final_text = "\n".join(translated_lines)
+    return dedupe_repetitions(final_text)
+
+
+# Paramètres LLM recommandés pour éviter les boucles en Éwé et Kabiyè lors des appels Grok / Groq :
+LLM_ANTI_LOOP_PARAMS = {
+    "temperature": 0.2,
+    "frequency_penalty": 0.6,
+    "presence_penalty": 0.4,
+}

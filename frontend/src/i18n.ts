@@ -593,3 +593,64 @@ export function translateAdvice(score: "vert" | "orange" | "rouge", defaultAdvic
 export function t(lang: Lang): UI {
   return I18N[lang] || I18N["Français"];
 }
+
+
+/**
+ * Nettoie les boucles de répétition (hallucinations NMT / LLM sur l'Éwé et le Kabiyè)
+ * Exemple : "ɖe ɖe ɖe ɖe..." ou "ɖokui le nu vɔ̃ le ɖokui le nu vɔ̃ le..."
+ */
+export function sanitizeLocalText(text: string): string {
+  if (!text) return text;
+  const lines = text.split("\n");
+  const cleanedLines = lines.map((line) => {
+    let words = line.split(" ");
+    for (let pass = 0; pass < 3; pass++) {
+      for (let n = 15; n >= 1; n--) {
+        const nextWords: string[] = [];
+        let i = 0;
+        while (i < words.length) {
+          const chunk = words.slice(i, i + n);
+          if (chunk.length === n && i + 2 * n <= words.length) {
+            let reps = 1;
+            const chunkLower = chunk.map((w) => w.toLowerCase()).join(" ");
+            while (
+              i + (reps + 1) * n <= words.length &&
+              words
+                .slice(i + reps * n, i + (reps + 1) * n)
+                .map((w) => w.toLowerCase())
+                .join(" ") === chunkLower
+            ) {
+              reps++;
+            }
+            if ((n >= 3 && reps >= 2) || (n < 3 && reps >= 3)) {
+              nextWords.push(...chunk);
+              i += reps * n;
+              const rem = words.length - i;
+              if (
+                n >= 4 &&
+                rem >= 3 &&
+                rem < n &&
+                words
+                  .slice(i, i + rem)
+                  .map((w) => w.toLowerCase())
+                  .join(" ") ===
+                  chunk
+                    .slice(0, rem)
+                    .map((w) => w.toLowerCase())
+                    .join(" ")
+              ) {
+                i += rem;
+              }
+              continue;
+            }
+          }
+          nextWords.push(words[i]);
+          i++;
+        }
+        words = nextWords;
+      }
+    }
+    return words.join(" ");
+  });
+  return cleanedLines.join("\n");
+}
