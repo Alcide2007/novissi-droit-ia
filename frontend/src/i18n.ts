@@ -726,6 +726,84 @@ installDomAntiLoopObserver();
  * 2. Nettoie automatiquement l'historique sauvegardé dans localStorage au chargement.
  * 3. Surveille le DOM en temps réel via MutationObserver pour couper toute répétition résiduelle.
  */
+
+
+/**
+ * BOUCLIER OCR AUTOMATIQUE (Client-Side Fallback pour Render & Vercel) :
+ * Si le backend Render renvoie "OCR non disponible sur ce serveur : Tesseract n'est pas installé"
+ * (parce que Render tourne sur un conteneur Python natif sans `apt-get install tesseract-ocr`),
+ * cet intercepteur capture automatiquement l'échec sur `/ocr` et extrait le texte de la photo
+ * de l'acte directement via le moteur Cloud OCR (français) pour que l'utilisateur n'ait JAMAIS d'erreur !
+ */
+async function clientSideOcrFallback(file: File | Blob): Promise<string> {
+  // Conversion et compression légère de l'image sur Canvas (< 1 Mo) pour une reconnaissance rapide sur mobile
+  const compressImage = async (blob: Blob): Promise<Blob> => {
+    if (blob.type === "application/pdf") return blob;
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const maxSide = 1600;
+        let { width, height } = img;
+        if (Math.max(width, height) > maxSide) {
+          const scale = maxSide / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(blob);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (out) => resolve(out || blob),
+          "image/jpeg",
+          0.84
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(blob);
+      };
+      img.src = url;
+    });
+  };
+
+  const processedBlob = await compressImage(file);
+  const form = new FormData();
+  form.append("apikey", "helloworld");
+  form.append("language", "fre");
+  form.append("isOverlayRequired", "false");
+  form.append("detectOrientation", "true");
+  form.append("scale", "true");
+  form.append("OCREngine", "2");
+  form.append(
+    "file",
+    processedBlob,
+    processedBlob.type === "application/pdf" ? "acte.pdf" : "acte.jpg"
+  );
+
+  const resp = await window.fetch("https://api.ocr.space/parse/image", {
+    method: "POST",
+    body: form,
+  });
+  if (!resp.ok) {
+    throw new Error("Échec de lecture de l'image");
+  }
+  const data = await resp.json();
+  const parsed = data?.ParsedResults;
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    const text = parsed.map((p: { ParsedText?: string }) => p?.ParsedText || "").join("\n").trim();
+    if (text) return text;
+  }
+  throw new Error("Aucun texte lisible détecté sur la photo de l'acte.");
+}
+
 function deepSanitizeValue(val: unknown): unknown {
   if (typeof val === "string") {
     return sanitizeLocalText(val);
@@ -770,27 +848,103 @@ function installTripleAntiLoopShield(): void {
     // Ignore storage access errors
   }
 
-  // 2. Intercepteur universel sur window.fetch
+  // 2. Intercepteur universel sur window.fetch (Anti-boucle Éwé/Kabiyè + Secours OCR automatique si Tesseract absent sur Render)
   const origFetch = window.fetch ? window.fetch.bind(window) : null;
   if (origFetch) {
     window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
-      const response = await origFetch(...args);
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const clone = response.clone();
-        try {
-          const data = await clone.json();
-          const cleanedData = deepSanitizeValue(data);
-          return new Response(JSON.stringify(cleanedData), {
-            status: response.status,
-            statusText: response.statusText,
-            headers: response.headers,
-          });
-        } catch {
-          return response;
+      const reqUrl = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
+      const reqInit = args[1] || {};
+      const isOcrCall = reqUrl.includes("/ocr") && !reqUrl.includes("ocr.space");
+
+      // Extraire le fichier image si c'est un appel vers /ocr au cas où le serveur Render n'a pas Tesseract
+      let uploadedFile: File | Blob | null = null;
+      if (isOcrCall && reqInit.body instanceof FormData) {
+        for (const [, val] of reqInit.body.entries()) {
+          if (val instanceof Blob) {
+            uploadedFile = val;
+            break;
+          }
         }
       }
-      return response;
+
+      try {
+        const response = await origFetch(...args);
+
+        // Si c'est un appel /ocr et que Render renvoie une erreur (ex: "Tesseract n'est pas installé")
+        if (isOcrCall && uploadedFile) {
+          const cloneCheck = response.clone();
+          let needFallback = !response.ok;
+          let jsonBody: Record<string, unknown> | null = null;
+          try {
+            jsonBody = await cloneCheck.json();
+            const errStr = JSON.stringify(jsonBody || {}).toLowerCase();
+            if (
+              errStr.includes("tesseract") ||
+              errStr.includes("non disponible") ||
+              (!jsonBody?.text && !jsonBody?.extracted_text)
+            ) {
+              needFallback = true;
+            }
+          } catch {
+            // Non-JSON error response
+          }
+
+          if (needFallback) {
+            try {
+              const ocrText = await clientSideOcrFallback(uploadedFile);
+              return new Response(
+                JSON.stringify({
+                  ok: true,
+                  text: ocrText,
+                  extracted_text: ocrText,
+                  engine: "cloud-ocr-fallback",
+                }),
+                {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+            } catch {
+              return response;
+            }
+          }
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const clone = response.clone();
+          try {
+            const data = await clone.json();
+            const cleanedData = deepSanitizeValue(data);
+            return new Response(JSON.stringify(cleanedData), {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+            });
+          } catch {
+            return response;
+          }
+        }
+        return response;
+      } catch (err) {
+        // Même si le serveur Render est en veille ou inaccessible lors d'un scan d'acte, le secours OCR prend le relais !
+        if (isOcrCall && uploadedFile) {
+          const ocrText = await clientSideOcrFallback(uploadedFile);
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              text: ocrText,
+              extracted_text: ocrText,
+              engine: "cloud-ocr-fallback",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        throw err;
+      }
     };
   }
 }

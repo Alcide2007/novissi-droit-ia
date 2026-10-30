@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: novissi-droit-ia-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: PYTHONPATH=backend python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: PYTHONPATH
+        value: backend
