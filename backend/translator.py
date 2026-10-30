@@ -84,8 +84,8 @@ def dedupe_repetitions(text: str) -> str:
                             # Absorbe aussi une queue partielle de la même boucle en fin de ligne
                             rem = len(words) - i
                             if (
-                                n >= 4
-                                and 3 <= rem < n
+                                n >= 2
+                                and 1 <= rem < n
                                 and [w.lower() for w in words[i : i + rem]] == chunk_lower[:rem]
                             ):
                                 i += rem
@@ -221,3 +221,19 @@ LLM_ANTI_LOOP_PARAMS = {
     "frequency_penalty": 0.6,
     "presence_penalty": 0.4,
 }
+
+
+
+def build_safe_system_prompt(base_prompt_fr: str, target_lang: str = "Français") -> str:
+    """
+    RÈGLE D'OR ANTI-BOUCLE POUR LE LLM (Grok / Groq gpt-oss-120b) :
+    Ne JAMAIS demander au LLM de générer directement en Éwé ou Kabiyè (car le décodeur
+    des LLM généralistes entre en boucle infinie sur les tokens `ɖe wò le ɣleti...`).
+    Le LLM rédige TOUJOURS en français clair et structuré, puis `translate_response()`
+    traduit chaque phrase proprement et applique `dedupe_repetitions()`.
+    """
+    return (
+        f"{base_prompt_fr.strip()}\n\n"
+        "IMPORTANT : Rédige ta réponse UNIQUEMENT en français clair, concis et sans aucune répétition "
+        "(la traduction vers la langue nationale sera effectuée en post-traitement)."
+    )

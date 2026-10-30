@@ -627,8 +627,8 @@ export function sanitizeLocalText(text: string): string {
               i += reps * n;
               const rem = words.length - i;
               if (
-                n >= 4 &&
-                rem >= 3 &&
+                n >= 2 &&
+                rem >= 1 &&
                 rem < n &&
                 words
                   .slice(i, i + rem)
@@ -654,3 +654,145 @@ export function sanitizeLocalText(text: string): string {
   });
   return cleanedLines.join("\n");
 }
+
+
+/**
+ * BOUCLIER AUTOMATIQUE DOM (Auto-Exécuté au chargement de i18n.ts) :
+ * Même si App.tsx ou backend/llm.py n'appelle pas explicitement sanitizeLocalText(),
+ * ce MutationObserver surveille en temps réel les bulles de chat (.md, .bubble, .turn)
+ * et coupe instantanément toute boucle de répétition en Éwé ou Kabiyè dès qu'elle apparaît à l'écran !
+ */
+function installDomAntiLoopObserver(): void {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  if ((window as unknown as Record<string, boolean>).__novissiAntiLoopInstalled) return;
+  (window as unknown as Record<string, boolean>).__novissiAntiLoopInstalled = true;
+
+  const hasLoopPattern = (s: string): boolean => {
+    if (!s || s.length < 40) return false;
+    return /(\b\S+(?:\s+\S+){0,8}?)(\s+\1){2,}/i.test(s);
+  };
+
+  const cleanTextNodesIn = (root: Node) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    let current = walker.nextNode();
+    while (current) {
+      nodes.push(current as Text);
+      current = walker.nextNode();
+    }
+    for (const textNode of nodes) {
+      const val = textNode.nodeValue;
+      if (val && hasLoopPattern(val)) {
+        const cleaned = sanitizeLocalText(val);
+        if (cleaned !== val) {
+          textNode.nodeValue = cleaned;
+        }
+      }
+    }
+  };
+
+  const runPass = () => {
+    const targets = document.querySelectorAll(".md, .bubble, .turn, .letter-paper, .panel");
+    targets.forEach((el) => cleanTextNodesIn(el));
+  };
+
+  const observer = new MutationObserver(() => {
+    runPass();
+  });
+
+  const start = () => {
+    if (!document.body) return;
+    runPass();
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+}
+
+installDomAntiLoopObserver();
+
+/**
+ * BOUCLIER TRIPLE COUCHE AUTOMATIQUE (Fetch + LocalStorage + DOM MutationObserver) :
+ * 1. Intercepte automatiquement toutes les réponses JSON de window.fetch (/chat, /decode, etc.)
+ *    et nettoie récursivement toutes les chaînes de caractères avant même que React ne les reçoive.
+ * 2. Nettoie automatiquement l'historique sauvegardé dans localStorage au chargement.
+ * 3. Surveille le DOM en temps réel via MutationObserver pour couper toute répétition résiduelle.
+ */
+function deepSanitizeValue(val: unknown): unknown {
+  if (typeof val === "string") {
+    return sanitizeLocalText(val);
+  }
+  if (Array.isArray(val)) {
+    return val.map(deepSanitizeValue);
+  }
+  if (val && typeof val === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      out[k] = deepSanitizeValue(v);
+    }
+    return out;
+  }
+  return val;
+}
+
+function installTripleAntiLoopShield(): void {
+  if (typeof window === "undefined") return;
+  const win = window as unknown as Record<string, unknown>;
+  if (win.__novissiTripleShieldInstalled) return;
+  win.__novissiTripleShieldInstalled = true;
+
+  // 1. Nettoyage immédiat des conversations stockées dans localStorage
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key) continue;
+      const raw = window.localStorage.getItem(key);
+      if (raw && raw.length > 40) {
+        try {
+          const parsed = JSON.parse(raw);
+          const cleaned = deepSanitizeValue(parsed);
+          window.localStorage.setItem(key, JSON.stringify(cleaned));
+        } catch {
+          const cleanedStr = sanitizeLocalText(raw);
+          if (cleanedStr !== raw) window.localStorage.setItem(key, cleanedStr);
+        }
+      }
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+
+  // 2. Intercepteur universel sur window.fetch
+  const origFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (origFetch) {
+    window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
+      const response = await origFetch(...args);
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const clone = response.clone();
+        try {
+          const data = await clone.json();
+          const cleanedData = deepSanitizeValue(data);
+          return new Response(JSON.stringify(cleanedData), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+          });
+        } catch {
+          return response;
+        }
+      }
+      return response;
+    };
+  }
+}
+
+installTripleAntiLoopShield();
