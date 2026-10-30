@@ -93,7 +93,7 @@ export type UI = {
   mutationHistory: string;
   recommendation: string;
   scoreLabels: { vert: string; orange: string; rouge: string };
-  // Génération de courriers (12 modèles)
+  // Génération de courriers
   letterType: string;
   groupTravail: string;
   groupBail: string;
@@ -594,10 +594,8 @@ export function t(lang: Lang): UI {
   return I18N[lang] || I18N["Français"];
 }
 
-
 /**
- * Nettoie les boucles de répétition (hallucinations NMT / LLM sur l'Éwé et le Kabiyè)
- * Exemple : "ɖe ɖe ɖe ɖe..." ou "ɖokui le nu vɔ̃ le ɖokui le nu vɔ̃ le..."
+ * Nettoie les boucles de répétition neuronale en Éwé et Kabiyè
  */
 export function sanitizeLocalText(text: string): string {
   if (!text) return text;
@@ -655,88 +653,23 @@ export function sanitizeLocalText(text: string): string {
   return cleanedLines.join("\n");
 }
 
-
-/**
- * BOUCLIER AUTOMATIQUE DOM (Auto-Exécuté au chargement de i18n.ts) :
- * Même si App.tsx ou backend/llm.py n'appelle pas explicitement sanitizeLocalText(),
- * ce MutationObserver surveille en temps réel les bulles de chat (.md, .bubble, .turn)
- * et coupe instantanément toute boucle de répétition en Éwé ou Kabiyè dès qu'elle apparaît à l'écran !
- */
-function installDomAntiLoopObserver(): void {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-  if ((window as unknown as Record<string, boolean>).__novissiAntiLoopInstalled) return;
-  (window as unknown as Record<string, boolean>).__novissiAntiLoopInstalled = true;
-
-  const hasLoopPattern = (s: string): boolean => {
-    if (!s || s.length < 40) return false;
-    return /(\b\S+(?:\s+\S+){0,8}?)(\s+\1){2,}/i.test(s);
-  };
-
-  const cleanTextNodesIn = (root: Node) => {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes: Text[] = [];
-    let current = walker.nextNode();
-    while (current) {
-      nodes.push(current as Text);
-      current = walker.nextNode();
+function deepSanitizeValue(val: unknown): unknown {
+  if (typeof val === "string") return sanitizeLocalText(val);
+  if (Array.isArray(val)) return val.map(deepSanitizeValue);
+  if (val && typeof val === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      out[k] = deepSanitizeValue(v);
     }
-    for (const textNode of nodes) {
-      const val = textNode.nodeValue;
-      if (val && hasLoopPattern(val)) {
-        const cleaned = sanitizeLocalText(val);
-        if (cleaned !== val) {
-          textNode.nodeValue = cleaned;
-        }
-      }
-    }
-  };
-
-  const runPass = () => {
-    const targets = document.querySelectorAll(".md, .bubble, .turn, .letter-paper, .panel");
-    targets.forEach((el) => cleanTextNodesIn(el));
-  };
-
-  const observer = new MutationObserver(() => {
-    runPass();
-  });
-
-  const start = () => {
-    if (!document.body) return;
-    runPass();
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start);
-  } else {
-    start();
+    return out;
   }
+  return val;
 }
 
-installDomAntiLoopObserver();
-
 /**
- * BOUCLIER TRIPLE COUCHE AUTOMATIQUE (Fetch + LocalStorage + DOM MutationObserver) :
- * 1. Intercepte automatiquement toutes les réponses JSON de window.fetch (/chat, /decode, etc.)
- *    et nettoie récursivement toutes les chaînes de caractères avant même que React ne les reçoive.
- * 2. Nettoie automatiquement l'historique sauvegardé dans localStorage au chargement.
- * 3. Surveille le DOM en temps réel via MutationObserver pour couper toute répétition résiduelle.
- */
-
-
-/**
- * BOUCLIER OCR AUTOMATIQUE (Client-Side Fallback pour Render & Vercel) :
- * Si le backend Render renvoie "OCR non disponible sur ce serveur : Tesseract n'est pas installé"
- * (parce que Render tourne sur un conteneur Python natif sans `apt-get install tesseract-ocr`),
- * cet intercepteur capture automatiquement l'échec sur `/ocr` et extrait le texte de la photo
- * de l'acte directement via le moteur Cloud OCR (français) pour que l'utilisateur n'ait JAMAIS d'erreur !
+ * Fallback OCR client-side si Tesseract est absent sur Render
  */
 async function clientSideOcrFallback(file: File | Blob): Promise<string> {
-  // Conversion et compression légère de l'image sur Canvas (< 1 Mo) pour une reconnaissance rapide sur mobile
   const compressImage = async (blob: Blob): Promise<Blob> => {
     if (blob.type === "application/pdf") return blob;
     return new Promise((resolve) => {
@@ -760,11 +693,7 @@ async function clientSideOcrFallback(file: File | Blob): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (out) => resolve(out || blob),
-          "image/jpeg",
-          0.84
-        );
+        canvas.toBlob((out) => resolve(out || blob), "image/jpeg", 0.84);
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
@@ -782,11 +711,7 @@ async function clientSideOcrFallback(file: File | Blob): Promise<string> {
   form.append("detectOrientation", "true");
   form.append("scale", "true");
   form.append("OCREngine", "2");
-  form.append(
-    "file",
-    processedBlob,
-    processedBlob.type === "application/pdf" ? "acte.pdf" : "acte.jpg"
-  );
+  form.append("file", processedBlob, processedBlob.type === "application/pdf" ? "acte.pdf" : "acte.jpg");
 
   const resp = await window.fetch("https://api.ocr.space/parse/image", {
     method: "POST",
@@ -804,51 +729,35 @@ async function clientSideOcrFallback(file: File | Blob): Promise<string> {
   throw new Error("Aucun texte lisible détecté sur la photo de l'acte.");
 }
 
-function deepSanitizeValue(val: unknown): unknown {
-  if (typeof val === "string") {
-    return sanitizeLocalText(val);
-  }
-  if (Array.isArray(val)) {
-    return val.map(deepSanitizeValue);
-  }
-  if (val && typeof val === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
-      out[k] = deepSanitizeValue(v);
-    }
-    return out;
-  }
-  return val;
-}
-
-function installTripleAntiLoopShield(): void {
+/**
+ * Bouclier automatique de protection réseau et DOM (chargé une seule fois)
+ */
+function installGlobalProtectionShield(): void {
   if (typeof window === "undefined") return;
   const win = window as unknown as Record<string, unknown>;
-  if (win.__novissiTripleShieldInstalled) return;
-  win.__novissiTripleShieldInstalled = true;
+  if (win.__novissiGlobalShieldActive) return;
+  win.__novissiGlobalShieldActive = true;
 
-  // 1. Nettoyage immédiat des conversations stockées dans localStorage
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
       if (!key) continue;
       const raw = window.localStorage.getItem(key);
-      if (raw && raw.length > 40) {
+      if (raw && raw.length > 30) {
         try {
           const parsed = JSON.parse(raw);
           const cleaned = deepSanitizeValue(parsed);
           window.localStorage.setItem(key, JSON.stringify(cleaned));
         } catch {
-          const cleanedStr = sanitizeLocalText(raw);
-          if (cleanedStr !== raw) window.localStorage.setItem(key, cleanedStr);
+          const s = sanitizeLocalText(raw);
+          if (s !== raw) window.localStorage.setItem(key, s);
         }
       }
     }
   } catch {
-    // Ignore storage access errors
+    // Ignore storage issues
   }
 
-  // 2. Intercepteur universel sur window.fetch (Anti-boucle Éwé/Kabiyè + Secours OCR automatique si Tesseract absent sur Render)
   const origFetch = window.fetch ? window.fetch.bind(window) : null;
   if (origFetch) {
     window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
@@ -856,7 +765,6 @@ function installTripleAntiLoopShield(): void {
       const reqInit = args[1] || {};
       const isOcrCall = reqUrl.includes("/ocr") && !reqUrl.includes("ocr.space");
 
-      // Extraire le fichier image si c'est un appel vers /ocr au cas où le serveur Render n'a pas Tesseract
       let uploadedFile: File | Blob | null = null;
       if (isOcrCall && reqInit.body instanceof FormData) {
         for (const [, val] of reqInit.body.entries()) {
@@ -870,13 +778,11 @@ function installTripleAntiLoopShield(): void {
       try {
         const response = await origFetch(...args);
 
-        // Si c'est un appel /ocr et que Render renvoie une erreur (ex: "Tesseract n'est pas installé")
         if (isOcrCall && uploadedFile) {
           const cloneCheck = response.clone();
           let needFallback = !response.ok;
-          let jsonBody: Record<string, unknown> | null = null;
           try {
-            jsonBody = await cloneCheck.json();
+            const jsonBody = await cloneCheck.json();
             const errStr = JSON.stringify(jsonBody || {}).toLowerCase();
             if (
               errStr.includes("tesseract") ||
@@ -886,7 +792,7 @@ function installTripleAntiLoopShield(): void {
               needFallback = true;
             }
           } catch {
-            // Non-JSON error response
+            // Non-JSON response
           }
 
           if (needFallback) {
@@ -901,7 +807,7 @@ function installTripleAntiLoopShield(): void {
                 }),
                 {
                   status: 200,
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "application/json; charset=utf-8" },
                 }
               );
             } catch {
@@ -911,145 +817,49 @@ function installTripleAntiLoopShield(): void {
         }
 
         const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("application/json")) {
+        if (response.ok && contentType.includes("application/json")) {
           const clone = response.clone();
           try {
             const data = await clone.json();
             const cleanedData = deepSanitizeValue(data);
+            const safeHeaders = new Headers();
+            safeHeaders.set("Content-Type", "application/json; charset=utf-8");
             return new Response(JSON.stringify(cleanedData), {
               status: response.status,
               statusText: response.statusText,
-              headers: response.headers,
+              headers: safeHeaders,
             });
           } catch {
             return response;
           }
         }
+
         return response;
       } catch (err) {
-        // Même si le serveur Render est en veille ou inaccessible lors d'un scan d'acte, le secours OCR prend le relais !
         if (isOcrCall && uploadedFile) {
-          const ocrText = await clientSideOcrFallback(uploadedFile);
-          return new Response(
-            JSON.stringify({
-              ok: true,
-              text: ocrText,
-              extracted_text: ocrText,
-              engine: "cloud-ocr-fallback",
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
+          try {
+            const ocrText = await clientSideOcrFallback(uploadedFile);
+            return new Response(
+              JSON.stringify({
+                ok: true,
+                text: ocrText,
+                extracted_text: ocrText,
+                engine: "cloud-ocr-fallback",
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json; charset=utf-8" },
+              }
+            );
+          } catch {
+            // Re-throw
+          }
         }
         throw err;
       }
     };
   }
-}
 
-/**
- * Nettoie les répétitions de texte (Éwé / Kabiyè)
- */
-export function sanitizeLocalText(text: string): string {
-  if (!text) return text;
-  const lines = text.split("\n");
-  const cleanedLines = lines.map((line) => {
-    let words = line.split(" ");
-    for (let pass = 0; pass < 3; pass++) {
-      for (let n = 15; n >= 1; n--) {
-        const nextWords: string[] = [];
-        let i = 0;
-        while (i < words.length) {
-          const chunk = words.slice(i, i + n);
-          if (chunk.length === n && i + 2 * n <= words.length) {
-            let reps = 1;
-            const chunkLower = chunk.map((w) => w.toLowerCase()).join(" ");
-            while (
-              i + (reps + 1) * n <= words.length &&
-              words.slice(i + reps * n, i + (reps + 1) * n).map((w) => w.toLowerCase()).join(" ") === chunkLower
-            ) {
-              reps++;
-            }
-            if ((n >= 3 && reps >= 2) || (n < 3 && reps >= 3)) {
-              nextWords.push(...chunk);
-              i += reps * n;
-              const rem = words.length - i;
-              if (
-                n >= 2 &&
-                rem >= 1 &&
-                rem < n &&
-                words.slice(i, i + rem).map((w) => w.toLowerCase()).join(" ") === chunk.slice(0, rem).map((w) => w.toLowerCase()).join(" ")
-              ) {
-                i += rem;
-              }
-              continue;
-            }
-          }
-          nextWords.push(words[i]);
-          i++;
-        }
-        words = nextWords;
-      }
-    }
-    return words.join(" ");
-  });
-  return cleanedLines.join("\n");
-}
-
-function deepSanitizeValue(val: unknown): unknown {
-  if (typeof val === "string") return sanitizeLocalText(val);
-  if (Array.isArray(val)) return val.map(deepSanitizeValue);
-  if (val && typeof val === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
-      out[k] = deepSanitizeValue(v);
-    }
-    return out;
-  }
-  return val;
-}
-
-/**
- * Intercepteur universel : nettoie les réponses sans corrompre les en-têtes gzip
- */
-function installSafeNetworkShield(): void {
-  if (typeof window === "undefined") return;
-  const win = window as unknown as Record<string, unknown>;
-  if (win.__novissiSafeShieldInstalled) return;
-  win.__novissiSafeShieldInstalled = true;
-
-  const origFetch = window.fetch ? window.fetch.bind(window) : null;
-  if (origFetch) {
-    window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
-      const response = await origFetch(...args);
-      const contentType = response.headers.get("content-type") || "";
-
-      if (response.ok && contentType.includes("application/json")) {
-        try {
-          const clone = response.clone();
-          const data = await clone.json();
-          const cleanedData = deepSanitizeValue(data);
-
-          // Construction propre sans les en-têtes de compression gzip
-          const safeHeaders = new Headers();
-          safeHeaders.set("Content-Type", "application/json; charset=utf-8");
-
-          return new Response(JSON.stringify(cleanedData), {
-            status: response.status,
-            statusText: response.statusText,
-            headers: safeHeaders,
-          });
-        } catch {
-          return response;
-        }
-      }
-      return response;
-    };
-  }
-
-  // Surveillance DOM en temps réel
   const observer = new MutationObserver(() => {
     document.querySelectorAll(".md, .bubble, .turn, p").forEach((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -1072,4 +882,4 @@ function installSafeNetworkShield(): void {
   }
 }
 
-installSafeNetworkShield();
+installGlobalProtectionShield();
