@@ -949,4 +949,127 @@ function installTripleAntiLoopShield(): void {
   }
 }
 
-installTripleAntiLoopShield();
+/**
+ * Nettoie les répétitions de texte (Éwé / Kabiyè)
+ */
+export function sanitizeLocalText(text: string): string {
+  if (!text) return text;
+  const lines = text.split("\n");
+  const cleanedLines = lines.map((line) => {
+    let words = line.split(" ");
+    for (let pass = 0; pass < 3; pass++) {
+      for (let n = 15; n >= 1; n--) {
+        const nextWords: string[] = [];
+        let i = 0;
+        while (i < words.length) {
+          const chunk = words.slice(i, i + n);
+          if (chunk.length === n && i + 2 * n <= words.length) {
+            let reps = 1;
+            const chunkLower = chunk.map((w) => w.toLowerCase()).join(" ");
+            while (
+              i + (reps + 1) * n <= words.length &&
+              words.slice(i + reps * n, i + (reps + 1) * n).map((w) => w.toLowerCase()).join(" ") === chunkLower
+            ) {
+              reps++;
+            }
+            if ((n >= 3 && reps >= 2) || (n < 3 && reps >= 3)) {
+              nextWords.push(...chunk);
+              i += reps * n;
+              const rem = words.length - i;
+              if (
+                n >= 2 &&
+                rem >= 1 &&
+                rem < n &&
+                words.slice(i, i + rem).map((w) => w.toLowerCase()).join(" ") === chunk.slice(0, rem).map((w) => w.toLowerCase()).join(" ")
+              ) {
+                i += rem;
+              }
+              continue;
+            }
+          }
+          nextWords.push(words[i]);
+          i++;
+        }
+        words = nextWords;
+      }
+    }
+    return words.join(" ");
+  });
+  return cleanedLines.join("\n");
+}
+
+function deepSanitizeValue(val: unknown): unknown {
+  if (typeof val === "string") return sanitizeLocalText(val);
+  if (Array.isArray(val)) return val.map(deepSanitizeValue);
+  if (val && typeof val === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      out[k] = deepSanitizeValue(v);
+    }
+    return out;
+  }
+  return val;
+}
+
+/**
+ * Intercepteur universel : nettoie les réponses sans corrompre les en-têtes gzip
+ */
+function installSafeNetworkShield(): void {
+  if (typeof window === "undefined") return;
+  const win = window as unknown as Record<string, unknown>;
+  if (win.__novissiSafeShieldInstalled) return;
+  win.__novissiSafeShieldInstalled = true;
+
+  const origFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (origFetch) {
+    window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
+      const response = await origFetch(...args);
+      const contentType = response.headers.get("content-type") || "";
+
+      if (response.ok && contentType.includes("application/json")) {
+        try {
+          const clone = response.clone();
+          const data = await clone.json();
+          const cleanedData = deepSanitizeValue(data);
+
+          // Construction propre sans les en-têtes de compression gzip
+          const safeHeaders = new Headers();
+          safeHeaders.set("Content-Type", "application/json; charset=utf-8");
+
+          return new Response(JSON.stringify(cleanedData), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: safeHeaders,
+          });
+        } catch {
+          return response;
+        }
+      }
+      return response;
+    };
+  }
+
+  // Surveillance DOM en temps réel
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll(".md, .bubble, .turn, p").forEach((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        if (node.nodeValue && /(\b\S+(?:\s+\S+){0,8}?)(\s+\1){2,}/i.test(node.nodeValue)) {
+          node.nodeValue = sanitizeLocalText(node.nodeValue);
+        }
+        node = walker.nextNode();
+      }
+    });
+  });
+
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener("DOMContentLoaded", () => {
+      if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+}
+
+installSafeNetworkShield();
