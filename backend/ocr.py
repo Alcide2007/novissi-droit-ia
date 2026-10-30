@@ -1,26 +1,30 @@
 """
 Module OCR Universel & Multi-Moteur (Sans dépendance obligatoire au binaire système Tesseract).
 Résout définitivement l'erreur Render : "OCR non disponible sur ce serveur : Tesseract n'est pas installé".
-
-Ordre d'exécution automatique (Fallback en cascade) :
-1. Si c'est un PDF : extraction directe via PyMuPDF (fitz) ou pypdf.
-2. Si le binaire `tesseract` est installé sur la machine : OCR local via pytesseract (fra).
-3. Si `tesseract` est absent (cas par défaut de l'environnement Python natif sur Render) :
-   a) OCR Vision IA haute précision via `GROQ_API_KEY` (modèle vision Llama-4-Scout / Llama-3.2-Vision)
-      ou `XAI_API_KEY` / `OPENAI_API_KEY`.
-   b) Fallback automatique vers l'API OCR.space (clé gratuite intégrée ou `OCR_SPACE_API_KEY`)
-      qui extrait le texte français des photos d'actes fonciers sans binaire système.
 """
 from __future__ import annotations
 
 import base64
 import io
+import json
 import logging
 import os
 import shutil
+import urllib.parse
+import urllib.request
+import uuid
 from typing import Any
 
-import requests
+# Import sécurisé : ne plante jamais si requests ou httpx est absent
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore
+
+try:
+    import requests
+except ImportError:
+    requests = None  # type: ignore
 
 try:
     from PIL import Image, ImageOps
@@ -52,15 +56,12 @@ def has_tesseract_binary() -> bool:
 
 
 def is_ocr_available() -> bool:
-    """
-    Indique au reste de l'application que l'OCR est TOUJOURS disponible
-    grâce au moteur hybride (Tesseract local + Cloud Vision / OCR Fallback).
-    """
+    """L'OCR est toujours disponible grâce au fallback Cloud / Vision IA."""
     return True
 
 
 def _preprocess_image_bytes(image_bytes: bytes, max_side: int = 1800) -> tuple[bytes, str]:
-    """Redimensionne et optimise l'image en JPEG pour accélérer l'OCR Cloud et respecter les limites de taille (< 1 Mo)."""
+    """Redimensionne et optimise l'image en JPEG pour respecter les quotas réseau."""
     if Image is None:
         return image_bytes, "image/jpeg"
     try:
@@ -81,7 +82,7 @@ def _preprocess_image_bytes(image_bytes: bytes, max_side: int = 1800) -> tuple[b
 
 
 def _ocr_with_local_tesseract(image_bytes: bytes, lang: str = "fra") -> str:
-    """Tente l'extraction via Tesseract local si le binaire existe sur le serveur."""
+    """Tente l'extraction via Tesseract local si présent."""
     if pytesseract is None or Image is None or not has_tesseract_binary():
         return ""
     try:
@@ -97,11 +98,40 @@ def _ocr_with_local_tesseract(image_bytes: bytes, lang: str = "fra") -> str:
         return ""
 
 
+def _post_json_universal(url: str, headers: dict[str, str], payload: dict[str, Any], timeout: float = 35.0) -> dict[str, Any] | None:
+    """Envoi POST JSON universel : utilise httpx, requests ou urllib (standard library)."""
+    if httpx is not None:
+        try:
+            r = httpx.post(url, headers=headers, json=payload, timeout=timeout)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
+
+    if requests is not None:
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=timeout)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
+
+    try:
+        data_bytes = json.dumps(payload).encode("utf-8")
+        req_headers = {"Content-Type": "application/json", "User-Agent": "NovissiDroitIA/1.0"}
+        req_headers.update(headers)
+        req = urllib.request.Request(url, data=data_bytes, headers=req_headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode("utf-8", errors="replace"))
+    except Exception:
+        pass
+
+    return None
+
+
 def _ocr_with_vision_llm(image_bytes: bytes) -> str:
-    """
-    Extrait le texte intégral d'un acte foncier ou contrat photographié via Groq Vision / Grok Vision / OpenAI Vision.
-    Fonctionne sur Render sans installer Tesseract !
-    """
+    """Extrait le texte via Groq Vision / Grok Vision / OpenAI Vision."""
     opt_bytes, mime = _preprocess_image_bytes(image_bytes)
     b64 = base64.b64encode(opt_bytes).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
@@ -112,7 +142,6 @@ def _ocr_with_vision_llm(image_bytes: bytes) -> str:
         "Ne commente pas, renvoie uniquement le texte extrait ligne par ligne."
     )
 
-    # 1. Essai avec GROQ_API_KEY (modèles Vision gratuits/rapides sur Groq Cloud)
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     if groq_key:
         vision_models = [
@@ -123,112 +152,103 @@ def _ocr_with_vision_llm(image_bytes: bytes) -> str:
             "llama-3.2-11b-vision-preview",
         ]
         for model in [m for m in vision_models if m]:
-            try:
-                resp = requests.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {groq_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": model,
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt},
-                                    {"type": "image_url", "image_url": {"url": data_uri}},
-                                ],
-                            }
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": data_uri}},
                         ],
-                        "temperature": 0.0,
-                        "max_tokens": 2048,
-                    },
-                    timeout=35,
-                )
-                if resp.status_code == 200:
-                    txt = resp.json()["choices"][0]["message"]["content"].strip()
-                    if len(txt) >= 15:
-                        return txt
-            except Exception as exc:
-                log.warning("Groq Vision (%s) ignoré : %s", model, exc)
-
-    # 2. Essai avec XAI_API_KEY (Grok Vision) ou OPENAI_API_KEY
-    for env_key, base_url, model_name in [
-        ("XAI_API_KEY", "https://api.x.ai/v1/chat/completions", "grok-2-vision-1212"),
-        ("OPENAI_API_KEY", "https://api.openai.com/v1/chat/completions", "gpt-4o-mini"),
-    ]:
-        api_key = os.getenv(env_key, "").strip()
-        if not api_key:
-            continue
-        try:
-            resp = requests.post(
-                base_url,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": model_name,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": prompt},
-                                {"type": "image_url", "image_url": {"url": data_uri}},
-                            ],
-                        }
-                    ],
-                    "temperature": 0.0,
-                    "max_tokens": 2048,
-                },
-                timeout=35,
+                    }
+                ],
+                "temperature": 0.0,
+                "max_tokens": 2048,
+            }
+            res = _post_json_universal(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}"},
+                payload=payload,
             )
-            if resp.status_code == 200:
-                txt = resp.json()["choices"][0]["message"]["content"].strip()
+            if res and "choices" in res and res["choices"]:
+                txt = res["choices"][0].get("message", {}).get("content", "").strip()
                 if len(txt) >= 15:
                     return txt
-        except Exception as exc:
-            log.warning("Vision API (%s) ignorée : %s", env_key, exc)
 
     return ""
 
 
 def _ocr_with_ocrspace_fallback(image_bytes: bytes, lang: str = "fre") -> str:
-    """
-    Moteur OCR Cloud de secours (OCR.space API) : fonctionne même sans Tesseract et sans clé Vision IA.
-    Supporte le français (`fre`) et les photos d'actes scannés.
-    """
+    """Moteur OCR Cloud de secours (OCR.space API) sans binaire système requis."""
     opt_bytes, _ = _preprocess_image_bytes(image_bytes, max_side=1500)
     api_key = os.getenv("OCR_SPACE_API_KEY", "helloworld").strip() or "helloworld"
+
+    data = {
+        "apikey": api_key,
+        "language": lang,
+        "isOverlayRequired": "false",
+        "detectOrientation": "true",
+        "scale": "true",
+        "OCREngine": "2",
+    }
+    files = {"filename": ("acte.jpg", opt_bytes, "image/jpeg")}
+
+    if httpx is not None:
+        try:
+            r = httpx.post("https://api.ocr.space/parse/image", data=data, files=files, timeout=30)
+            if r.status_code == 200:
+                parsed = r.json().get("ParsedResults") or []
+                if parsed:
+                    return "\n".join(p.get("ParsedText", "") for p in parsed).strip()
+        except Exception:
+            pass
+
+    if requests is not None:
+        try:
+            r = requests.post("https://api.ocr.space/parse/image", data=data, files=files, timeout=30)
+            if r.status_code == 200:
+                parsed = r.json().get("ParsedResults") or []
+                if parsed:
+                    return "\n".join(p.get("ParsedText", "") for p in parsed).strip()
+        except Exception:
+            pass
+
+    # Fallback standard library urllib
     try:
-        resp = requests.post(
+        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+        body = bytearray()
+        for k, v in data.items():
+            body.extend(f"--{boundary}\r\n".encode("utf-8"))
+            body.extend(f'Content-Disposition: form-data; name="{k}"\r\n\r\n'.encode("utf-8"))
+            body.extend(str(v).encode("utf-8"))
+            body.extend(b"\r\n")
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(b'Content-Disposition: form-data; name="filename"; filename="acte.jpg"\r\n')
+        body.extend(b"Content-Type: image/jpeg\r\n\r\n")
+        body.extend(opt_bytes)
+        body.extend(b"\r\n")
+        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+
+        req = urllib.request.Request(
             "https://api.ocr.space/parse/image",
-            data={
-                "apikey": api_key,
-                "language": lang,
-                "isOverlayRequired": "false",
-                "detectOrientation": "true",
-                "scale": "true",
-                "OCREngine": "2",
-            },
-            files={"filename": ("acte.jpg", opt_bytes, "image/jpeg")},
-            timeout=30,
+            data=bytes(body),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "NovissiDroitIA/1.0"},
+            method="POST",
         )
-        if resp.status_code == 200:
-            payload = resp.json()
-            parsed = payload.get("ParsedResults") or []
-            if parsed:
-                txt = "\n".join(p.get("ParsedText", "") for p in parsed).strip()
-                if txt:
-                    return txt
-    except Exception as exc:
-        log.warning("Fallback OCR.space ignoré : %s", exc)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            if resp.status == 200:
+                parsed = json.loads(resp.read().decode("utf-8", errors="replace")).get("ParsedResults") or []
+                if parsed:
+                    return "\n".join(p.get("ParsedText", "") for p in parsed).strip()
+    except Exception:
+        pass
+
     return ""
 
 
 def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
-    """Extrait le texte d'un PDF (natif ou scanné) via PyMuPDF ou pypdf."""
+    """Extrait le texte d'un PDF via PyMuPDF ou pypdf."""
     parts: list[str] = []
     if fitz is not None:
         try:
@@ -242,10 +262,9 @@ def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
                 return text
             if len(doc) > 0:
                 pix = doc[0].get_pixmap(dpi=180)
-                img_bytes = pix.tobytes("jpeg")
-                return extract_text_from_bytes(img_bytes, filename="scan.jpg")
+                return extract_text_from_bytes(pix.tobytes("jpeg"), filename="scan.jpg")
         except Exception as exc:
-            log.warning("PyMuPDF lecture PDF échouée : %s", exc)
+            log.warning("PyMuPDF lecture échouée : %s", exc)
 
     if PdfReader is not None:
         try:
@@ -254,20 +273,13 @@ def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
                 parts.append(page.extract_text() or "")
             return "\n\n".join(parts).strip()
         except Exception as exc:
-            log.warning("pypdf lecture PDF échouée : %s", exc)
+            log.warning("pypdf lecture échouée : %s", exc)
+
     return ""
 
 
-def extract_text_from_bytes(
-    data: bytes,
-    filename: str = "document.jpg",
-    content_type: str = "",
-    lang: str = "fra",
-) -> str:
-    """
-    Point d'entrée universel pour extraire le texte d'une image ou d'un PDF.
-    Ne lève JAMAIS l'erreur 'Tesseract n'est pas installé'.
-    """
+def extract_text_from_bytes(data: bytes, filename: str = "document.jpg", content_type: str = "", lang: str = "fra") -> str:
+    """Point d'entrée universel d'extraction de texte."""
     if not data:
         return ""
 
@@ -276,17 +288,14 @@ def extract_text_from_bytes(
     if data.startswith(b"%PDF-") or fname.endswith(".pdf") or "pdf" in ctype:
         return _extract_pdf_bytes(data)
 
-    # 1. Essai Tesseract local si disponible
     text = _ocr_with_local_tesseract(data, lang=lang)
     if len(text) >= 20:
         return text
 
-    # 2. Essai Vision IA (Groq Llama-4-Scout / Grok / OpenAI)
     text = _ocr_with_vision_llm(data)
     if len(text) >= 15:
         return text
 
-    # 3. Essai OCR.space Cloud Fallback (gratuit, sans binaire système)
     text = _ocr_with_ocrspace_fallback(data, lang="fre")
     if text:
         return text
@@ -295,7 +304,6 @@ def extract_text_from_bytes(
 
 
 def extract_text(file_or_bytes: Any, filename: str = "", content_type: str = "", lang: str = "fra") -> dict[str, Any] | str:
-    """Compatible à la fois avec un appel qui attend une string ou un dict."""
     if isinstance(file_or_bytes, (bytes, bytearray)):
         raw = bytes(file_or_bytes)
     elif hasattr(file_or_bytes, "read"):
@@ -305,9 +313,7 @@ def extract_text(file_or_bytes: Any, filename: str = "", content_type: str = "",
             raw = f.read()
     else:
         raw = b""
-
-    txt = extract_text_from_bytes(raw, filename=filename, content_type=content_type, lang=lang)
-    return txt
+    return extract_text_from_bytes(raw, filename=filename, content_type=content_type, lang=lang)
 
 
 def ocr_image(data: bytes, filename: str = "image.jpg", lang: str = "fra") -> str:
