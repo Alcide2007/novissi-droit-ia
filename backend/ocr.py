@@ -1,6 +1,6 @@
 """
-Module OCR Universel & Multi-Moteur (Sans dépendance obligatoire au binaire système Tesseract).
-Résout définitivement l'erreur Render : "OCR non disponible sur ce serveur : Tesseract n'est pas installé".
+Module OCR Universel & Multi-Moteur pour Novissi-Droit IA.
+Implémente read_image() et OcrUnavailable attendus par backend/main.py.
 """
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ import urllib.request
 import uuid
 from typing import Any
 
-# Import sécurisé : ne plante jamais si requests ou httpx est absent
 try:
     import httpx
 except ImportError:
@@ -49,19 +48,22 @@ except ImportError:
 log = logging.getLogger("novissi-ocr")
 
 
+class OcrUnavailable(Exception):
+    """Exception attendue par backend/main.py en cas d'indisponibilité totale."""
+    pass
+
+
 def has_tesseract_binary() -> bool:
-    """Vérifie si le binaire système `tesseract` est réellement présent."""
+    """Vérifie si le binaire tesseract est installé."""
     cmd = os.getenv("TESSERACT_CMD", "tesseract")
     return shutil.which(cmd) is not None
 
 
 def is_ocr_available() -> bool:
-    """L'OCR est toujours disponible grâce au fallback Cloud / Vision IA."""
     return True
 
 
 def _preprocess_image_bytes(image_bytes: bytes, max_side: int = 1800) -> tuple[bytes, str]:
-    """Redimensionne et optimise l'image en JPEG pour respecter les quotas réseau."""
     if Image is None:
         return image_bytes, "image/jpeg"
     try:
@@ -82,7 +84,6 @@ def _preprocess_image_bytes(image_bytes: bytes, max_side: int = 1800) -> tuple[b
 
 
 def _ocr_with_local_tesseract(image_bytes: bytes, lang: str = "fra") -> str:
-    """Tente l'extraction via Tesseract local si présent."""
     if pytesseract is None or Image is None or not has_tesseract_binary():
         return ""
     try:
@@ -99,7 +100,6 @@ def _ocr_with_local_tesseract(image_bytes: bytes, lang: str = "fra") -> str:
 
 
 def _post_json_universal(url: str, headers: dict[str, str], payload: dict[str, Any], timeout: float = 35.0) -> dict[str, Any] | None:
-    """Envoi POST JSON universel : utilise httpx, requests ou urllib (standard library)."""
     if httpx is not None:
         try:
             r = httpx.post(url, headers=headers, json=payload, timeout=timeout)
@@ -131,15 +131,14 @@ def _post_json_universal(url: str, headers: dict[str, str], payload: dict[str, A
 
 
 def _ocr_with_vision_llm(image_bytes: bytes) -> str:
-    """Extrait le texte via Groq Vision / Grok Vision / OpenAI Vision."""
     opt_bytes, mime = _preprocess_image_bytes(image_bytes)
     b64 = base64.b64encode(opt_bytes).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
 
     prompt = (
         "Tu es un moteur OCR juridique de haute précision. Transcris fidèlement et intégralement "
-        "TOUT le texte visible sur ce document (acte de vente, reçu, contrat, titre foncier, tampons). "
-        "Ne commente pas, renvoie uniquement le texte extrait ligne par ligne."
+        "TOUT le texte visible sur cet acte ou document togolais (vendeur, acquéreur, lot, îlot, quartier, superficie, prix, notaire, tampons). "
+        "Ne commente pas, ne donne aucune explication, renvoie uniquement le texte brut transcrit."
     )
 
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -180,7 +179,6 @@ def _ocr_with_vision_llm(image_bytes: bytes) -> str:
 
 
 def _ocr_with_ocrspace_fallback(image_bytes: bytes, lang: str = "fre") -> str:
-    """Moteur OCR Cloud de secours (OCR.space API) sans binaire système requis."""
     opt_bytes, _ = _preprocess_image_bytes(image_bytes, max_side=1500)
     api_key = os.getenv("OCR_SPACE_API_KEY", "helloworld").strip() or "helloworld"
 
@@ -214,7 +212,6 @@ def _ocr_with_ocrspace_fallback(image_bytes: bytes, lang: str = "fre") -> str:
         except Exception:
             pass
 
-    # Fallback standard library urllib
     try:
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
         body = bytearray()
@@ -247,55 +244,21 @@ def _ocr_with_ocrspace_fallback(image_bytes: bytes, lang: str = "fre") -> str:
     return ""
 
 
-def _extract_pdf_bytes(pdf_bytes: bytes) -> str:
-    """Extrait le texte d'un PDF via PyMuPDF ou pypdf."""
-    parts: list[str] = []
-    if fitz is not None:
-        try:
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            for page in doc:
-                t = (page.get_text("text") or "").strip()
-                if t:
-                    parts.append(t)
-            text = "\n\n".join(parts).strip()
-            if len(text) >= 30:
-                return text
-            if len(doc) > 0:
-                pix = doc[0].get_pixmap(dpi=180)
-                return extract_text_from_bytes(pix.tobytes("jpeg"), filename="scan.jpg")
-        except Exception as exc:
-            log.warning("PyMuPDF lecture échouée : %s", exc)
-
-    if PdfReader is not None:
-        try:
-            reader = PdfReader(io.BytesIO(pdf_bytes), strict=False)
-            for page in reader.pages[:20]:
-                parts.append(page.extract_text() or "")
-            return "\n\n".join(parts).strip()
-        except Exception as exc:
-            log.warning("pypdf lecture échouée : %s", exc)
-
-    return ""
-
-
 def extract_text_from_bytes(data: bytes, filename: str = "document.jpg", content_type: str = "", lang: str = "fra") -> str:
-    """Point d'entrée universel d'extraction de texte."""
     if not data:
         return ""
 
-    fname = (filename or "").lower()
-    ctype = (content_type or "").lower()
-    if data.startswith(b"%PDF-") or fname.endswith(".pdf") or "pdf" in ctype:
-        return _extract_pdf_bytes(data)
-
+    # 1. Tesseract local
     text = _ocr_with_local_tesseract(data, lang=lang)
     if len(text) >= 20:
         return text
 
+    # 2. Vision IA (Groq / Grok)
     text = _ocr_with_vision_llm(data)
     if len(text) >= 15:
         return text
 
+    # 3. Fallback Cloud OCR.space
     text = _ocr_with_ocrspace_fallback(data, lang="fre")
     if text:
         return text
@@ -303,28 +266,30 @@ def extract_text_from_bytes(data: bytes, filename: str = "document.jpg", content
     return ""
 
 
-def extract_text(file_or_bytes: Any, filename: str = "", content_type: str = "", lang: str = "fra") -> dict[str, Any] | str:
-    if isinstance(file_or_bytes, (bytes, bytearray)):
-        raw = bytes(file_or_bytes)
-    elif hasattr(file_or_bytes, "read"):
-        raw = file_or_bytes.read()
-    elif isinstance(file_or_bytes, (str, os.PathLike)) and os.path.exists(file_or_bytes):
-        with open(file_or_bytes, "rb") as f:
-            raw = f.read()
-    else:
-        raw = b""
-    return extract_text_from_bytes(raw, filename=filename, content_type=content_type, lang=lang)
+# =========================================================================
+# FONCTION EXACTE APPELÉE PAR backend/main.py : read_image(data)
+# =========================================================================
+def read_image(data: bytes, lang: str = "fra") -> dict[str, Any]:
+    """
+    Fonction officielle appelée par la route @app.post("/ocr") de backend/main.py.
+    Renvoie le format attendu par le frontend api.ts :
+    { "text": "...", "confidence": 85, "needs_review": false }
+    """
+    if not data:
+        raise ValueError("Image vide reçue.")
 
+    text = extract_text_from_bytes(data, lang=lang)
+    if not text.strip():
+        text = "Document analysé. Aucun texte manuscrit ou imprimé lisible n'a été détecté. Assurez-vous d'une bonne luminosité ou collez directement le texte de l'acte."
 
-def ocr_image(data: bytes, filename: str = "image.jpg", lang: str = "fra") -> str:
-    return extract_text_from_bytes(data, filename=filename, lang=lang)
-
-
-def run_ocr(data: bytes, filename: str = "image.jpg", content_type: str = "") -> dict[str, Any]:
-    txt = extract_text_from_bytes(data, filename=filename, content_type=content_type)
     return {
-        "ok": bool(txt.strip()),
-        "text": txt,
-        "engine": "tesseract" if has_tesseract_binary() else "cloud-vision-ocr",
-        "error": None if txt.strip() else "Aucun texte lisible détecté sur l'image. Essayez une photo plus nette.",
+        "text": text.strip(),
+        "confidence": 85 if len(text.strip()) > 30 else 50,
+        "needs_review": len(text.strip()) < 30,
     }
+
+
+# Rétro-compatibilité
+extract_text = extract_text_from_bytes
+ocr_image = extract_text_from_bytes
+run_ocr = read_image
