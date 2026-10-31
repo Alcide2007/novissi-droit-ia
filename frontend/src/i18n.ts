@@ -595,15 +595,15 @@ export function t(lang: Lang): UI {
 }
 
 /**
- * Nettoie les boucles de répétition neuronale en Éwé et Kabiyè
+ * Nettoie les répétitions de texte (Éwé / Kabiyè)
  */
 export function sanitizeLocalText(text: string): string {
   if (!text) return text;
   const lines = text.split("\n");
   const cleanedLines = lines.map((line) => {
     let words = line.split(" ");
-    for (let pass = 0; pass < 3; pass++) {
-      for (let n = 15; n >= 1; n--) {
+    for (let pass = 0; pass < 2; pass++) {
+      for (let n = 12; n >= 1; n--) {
         const nextWords: string[] = [];
         let i = 0;
         while (i < words.length) {
@@ -613,32 +613,13 @@ export function sanitizeLocalText(text: string): string {
             const chunkLower = chunk.map((w) => w.toLowerCase()).join(" ");
             while (
               i + (reps + 1) * n <= words.length &&
-              words
-                .slice(i + reps * n, i + (reps + 1) * n)
-                .map((w) => w.toLowerCase())
-                .join(" ") === chunkLower
+              words.slice(i + reps * n, i + (reps + 1) * n).map((w) => w.toLowerCase()).join(" ") === chunkLower
             ) {
               reps++;
             }
             if ((n >= 3 && reps >= 2) || (n < 3 && reps >= 3)) {
               nextWords.push(...chunk);
               i += reps * n;
-              const rem = words.length - i;
-              if (
-                n >= 2 &&
-                rem >= 1 &&
-                rem < n &&
-                words
-                  .slice(i, i + rem)
-                  .map((w) => w.toLowerCase())
-                  .join(" ") ===
-                  chunk
-                    .slice(0, rem)
-                    .map((w) => w.toLowerCase())
-                    .join(" ")
-              ) {
-                i += rem;
-              }
               continue;
             }
           }
@@ -652,234 +633,3 @@ export function sanitizeLocalText(text: string): string {
   });
   return cleanedLines.join("\n");
 }
-
-function deepSanitizeValue(val: unknown): unknown {
-  if (typeof val === "string") return sanitizeLocalText(val);
-  if (Array.isArray(val)) return val.map(deepSanitizeValue);
-  if (val && typeof val === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
-      out[k] = deepSanitizeValue(v);
-    }
-    return out;
-  }
-  return val;
-}
-
-/**
- * Fallback OCR client-side si Tesseract est absent sur Render
- */
-async function clientSideOcrFallback(file: File | Blob): Promise<string> {
-  const compressImage = async (blob: Blob): Promise<Blob> => {
-    if (blob.type === "application/pdf") return blob;
-    return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(blob);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const maxSide = 1600;
-        let { width, height } = img;
-        if (Math.max(width, height) > maxSide) {
-          const scale = maxSide / Math.max(width, height);
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(blob);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((out) => resolve(out || blob), "image/jpeg", 0.84);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(blob);
-      };
-      img.src = url;
-    });
-  };
-
-  const processedBlob = await compressImage(file);
-  const form = new FormData();
-  form.append("apikey", "helloworld");
-  form.append("language", "fre");
-  form.append("isOverlayRequired", "false");
-  form.append("detectOrientation", "true");
-  form.append("scale", "true");
-  form.append("OCREngine", "2");
-  form.append("file", processedBlob, processedBlob.type === "application/pdf" ? "acte.pdf" : "acte.jpg");
-
-  const resp = await window.fetch("https://api.ocr.space/parse/image", {
-    method: "POST",
-    body: form,
-  });
-  if (!resp.ok) {
-    throw new Error("Échec de lecture de l'image");
-  }
-  const data = await resp.json();
-  const parsed = data?.ParsedResults;
-  if (Array.isArray(parsed) && parsed.length > 0) {
-    const text = parsed.map((p: { ParsedText?: string }) => p?.ParsedText || "").join("\n").trim();
-    if (text) return text;
-  }
-  throw new Error("Aucun texte lisible détecté sur la photo de l'acte.");
-}
-
-/**
- * Bouclier automatique de protection réseau et DOM (chargé une seule fois)
- */
-function installGlobalProtectionShield(): void {
-  if (typeof window === "undefined") return;
-  const win = window as unknown as Record<string, unknown>;
-  if (win.__novissiGlobalShieldActive) return;
-  win.__novissiGlobalShieldActive = true;
-
-  try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
-      if (!key) continue;
-      const raw = window.localStorage.getItem(key);
-      if (raw && raw.length > 30) {
-        try {
-          const parsed = JSON.parse(raw);
-          const cleaned = deepSanitizeValue(parsed);
-          window.localStorage.setItem(key, JSON.stringify(cleaned));
-        } catch {
-          const s = sanitizeLocalText(raw);
-          if (s !== raw) window.localStorage.setItem(key, s);
-        }
-      }
-    }
-  } catch {
-    // Ignore storage issues
-  }
-
-  const origFetch = window.fetch ? window.fetch.bind(window) : null;
-  if (origFetch) {
-    window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
-      const reqUrl = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
-      const reqInit = args[1] || {};
-      const isOcrCall = reqUrl.includes("/ocr") && !reqUrl.includes("ocr.space");
-
-      let uploadedFile: File | Blob | null = null;
-      if (isOcrCall && reqInit.body instanceof FormData) {
-        for (const [, val] of reqInit.body.entries()) {
-          if (val instanceof Blob) {
-            uploadedFile = val;
-            break;
-          }
-        }
-      }
-
-      try {
-        const response = await origFetch(...args);
-
-        if (isOcrCall && uploadedFile) {
-          const cloneCheck = response.clone();
-          let needFallback = !response.ok;
-          try {
-            const jsonBody = await cloneCheck.json();
-            const errStr = JSON.stringify(jsonBody || {}).toLowerCase();
-            if (
-              errStr.includes("tesseract") ||
-              errStr.includes("non disponible") ||
-              (!jsonBody?.text && !jsonBody?.extracted_text)
-            ) {
-              needFallback = true;
-            }
-          } catch {
-            // Non-JSON response
-          }
-
-          if (needFallback) {
-            try {
-              const ocrText = await clientSideOcrFallback(uploadedFile);
-              return new Response(
-                JSON.stringify({
-                  ok: true,
-                  text: ocrText,
-                  extracted_text: ocrText,
-                  engine: "cloud-ocr-fallback",
-                }),
-                {
-                  status: 200,
-                  headers: { "Content-Type": "application/json; charset=utf-8" },
-                }
-              );
-            } catch {
-              return response;
-            }
-          }
-        }
-
-        const contentType = response.headers.get("content-type") || "";
-        if (response.ok && contentType.includes("application/json")) {
-          const clone = response.clone();
-          try {
-            const data = await clone.json();
-            const cleanedData = deepSanitizeValue(data);
-            const safeHeaders = new Headers();
-            safeHeaders.set("Content-Type", "application/json; charset=utf-8");
-            return new Response(JSON.stringify(cleanedData), {
-              status: response.status,
-              statusText: response.statusText,
-              headers: safeHeaders,
-            });
-          } catch {
-            return response;
-          }
-        }
-
-        return response;
-      } catch (err) {
-        if (isOcrCall && uploadedFile) {
-          try {
-            const ocrText = await clientSideOcrFallback(uploadedFile);
-            return new Response(
-              JSON.stringify({
-                ok: true,
-                text: ocrText,
-                extracted_text: ocrText,
-                engine: "cloud-ocr-fallback",
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json; charset=utf-8" },
-              }
-            );
-          } catch {
-            // Re-throw
-          }
-        }
-        throw err;
-      }
-    };
-  }
-
-  const observer = new MutationObserver(() => {
-    document.querySelectorAll(".md, .bubble, .turn, p").forEach((el) => {
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode();
-      while (node) {
-        if (node.nodeValue && /(\b\S+(?:\s+\S+){0,8}?)(\s+\1){2,}/i.test(node.nodeValue)) {
-          node.nodeValue = sanitizeLocalText(node.nodeValue);
-        }
-        node = walker.nextNode();
-      }
-    });
-  });
-
-  if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
-  } else {
-    document.addEventListener("DOMContentLoaded", () => {
-      if (document.body) observer.observe(document.body, { childList: true, subtree: true });
-    });
-  }
-}
-
-installGlobalProtectionShield();
