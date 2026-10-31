@@ -738,6 +738,7 @@ function installGlobalProtectionShield(): void {
   if (win.__novissiGlobalShieldActive) return;
   win.__novissiGlobalShieldActive = true;
 
+  // 1. Nettoyage initial de l'historique local sans bloquer l'interface
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i);
@@ -755,130 +756,34 @@ function installGlobalProtectionShield(): void {
       }
     }
   } catch {
-    // Ignore storage issues
+    // Ignore les erreurs d'accès au stockage
   }
 
+  // 2. Intercepteur fetch sécurisé pour dé-boucler les données JSON entrantes
   const origFetch = window.fetch ? window.fetch.bind(window) : null;
   if (origFetch) {
     window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
-      const reqUrl = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
-      const reqInit = args[1] || {};
-      const isOcrCall = reqUrl.includes("/ocr") && !reqUrl.includes("ocr.space");
+      const response = await origFetch(...args);
+      const contentType = response.headers.get("content-type") || "";
 
-      let uploadedFile: File | Blob | null = null;
-      if (isOcrCall && reqInit.body instanceof FormData) {
-        for (const [, val] of reqInit.body.entries()) {
-          if (val instanceof Blob) {
-            uploadedFile = val;
-            break;
-          }
-        }
-      }
-
-      try {
-        const response = await origFetch(...args);
-
-        if (isOcrCall && uploadedFile) {
-          const cloneCheck = response.clone();
-          let needFallback = !response.ok;
-          try {
-            const jsonBody = await cloneCheck.json();
-            const errStr = JSON.stringify(jsonBody || {}).toLowerCase();
-            if (
-              errStr.includes("tesseract") ||
-              errStr.includes("non disponible") ||
-              (!jsonBody?.text && !jsonBody?.extracted_text)
-            ) {
-              needFallback = true;
-            }
-          } catch {
-            // Non-JSON response
-          }
-
-          if (needFallback) {
-            try {
-              const ocrText = await clientSideOcrFallback(uploadedFile);
-              return new Response(
-                JSON.stringify({
-                  ok: true,
-                  text: ocrText,
-                  extracted_text: ocrText,
-                  engine: "cloud-ocr-fallback",
-                }),
-                {
-                  status: 200,
-                  headers: { "Content-Type": "application/json; charset=utf-8" },
-                }
-              );
-            } catch {
-              return response;
-            }
-          }
-        }
-
-        const contentType = response.headers.get("content-type") || "";
-        if (response.ok && contentType.includes("application/json")) {
+      if (response.ok && contentType.includes("application/json")) {
+        try {
           const clone = response.clone();
-          try {
-            const data = await clone.json();
-            const cleanedData = deepSanitizeValue(data);
-            const safeHeaders = new Headers();
-            safeHeaders.set("Content-Type", "application/json; charset=utf-8");
-            return new Response(JSON.stringify(cleanedData), {
-              status: response.status,
-              statusText: response.statusText,
-              headers: safeHeaders,
-            });
-          } catch {
-            return response;
-          }
+          const data = await clone.json();
+          const cleanedData = deepSanitizeValue(data);
+          const safeHeaders = new Headers();
+          safeHeaders.set("Content-Type", "application/json; charset=utf-8");
+          return new Response(JSON.stringify(cleanedData), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: safeHeaders,
+          });
+        } catch {
+          return response;
         }
-
-        return response;
-      } catch (err) {
-        if (isOcrCall && uploadedFile) {
-          try {
-            const ocrText = await clientSideOcrFallback(uploadedFile);
-            return new Response(
-              JSON.stringify({
-                ok: true,
-                text: ocrText,
-                extracted_text: ocrText,
-                engine: "cloud-ocr-fallback",
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json; charset=utf-8" },
-              }
-            );
-          } catch {
-            // Re-throw
-          }
-        }
-        throw err;
       }
+      return response;
     };
-  }
-
-  const observer = new MutationObserver(() => {
-    document.querySelectorAll(".md, .bubble, .turn, p").forEach((el) => {
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode();
-      while (node) {
-        if (node.nodeValue && /(\b\S+(?:\s+\S+){0,8}?)(\s+\1){2,}/i.test(node.nodeValue)) {
-          node.nodeValue = sanitizeLocalText(node.nodeValue);
-        }
-        node = walker.nextNode();
-      }
-    });
-  });
-
-  if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
-  } else {
-    document.addEventListener("DOMContentLoaded", () => {
-      if (document.body) observer.observe(document.body, { childList: true, subtree: true });
-    });
   }
 }
 

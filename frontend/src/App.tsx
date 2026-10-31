@@ -187,3 +187,10 @@ export default function App() {
     </div>
   );
 }
+useEffect(() => {
+  // Réveille l'instance Render dès le chargement de la page d'accueil
+  const backendUrl = import.meta.env.VITE_API_URL || "https://novissi-droit-ia.onrender.com";
+  fetch(`${backendUrl}/health`, { method: "GET" }).catch(() => {
+    // Erreur silencieuse normale si le serveur est en cours de démarrage
+  });
+}, []);
