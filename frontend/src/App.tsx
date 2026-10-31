@@ -22,7 +22,11 @@ export default function App() {
   const [err, setErr] = useState("");
   const [menu, setMenu] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem("novissi-sidebar-collapsed") === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem("novissi-sidebar-collapsed") === "1";
+    } catch {
+      return false;
+    }
   });
   const [user, setUser] = useState<UserAccount | null>(() => api.currentUser());
   const [transcript, setTranscript] = useState("");
@@ -38,15 +42,33 @@ export default function App() {
   };
 
   const refresh = useCallback(() => {
-    api.listConversations(search).then((c) => { setConvs(c); setErr(""); })
+    api
+      .listConversations(search)
+      .then((c) => {
+        setConvs(c);
+        setErr("");
+      })
       .catch((e: Error) => setErr(e.message));
   }, [search]);
+
   useEffect(refresh, [refresh]);
+
+  // Réveil préventif de Render (bien placé à l'intérieur du composant)
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_API_URL || "https://novissi-droit-ia.onrender.com";
+    fetch(`${backendUrl}/health`, { method: "GET" }).catch(() => {
+      // Erreur ignorée si le serveur démarre
+    });
+  }, []);
 
   function toggleCollapse() {
     setCollapsed((prev) => {
       const next = !prev;
-      try { localStorage.setItem("novissi-sidebar-collapsed", next ? "1" : "0"); } catch { /* ignoré */ }
+      try {
+        localStorage.setItem("novissi-sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        /* ignoré */
+      }
       return next;
     });
   }
@@ -153,13 +175,20 @@ export default function App() {
             }}
           />
         )}
-        {view === "docs" && <div className="page"><LetterGenerator lang={lang} initialKind={selectedLetterKind} /></div>}
+        {view === "docs" && (
+          <div className="page">
+            <LetterGenerator lang={lang} initialKind={selectedLetterKind} />
+          </div>
+        )}
         {view === "acte" && (
           <div className="page">
             <ActeAnalyzer
               lang={lang}
               linkedParcel={focus}
-              onMap={(d) => { setFocus(d); setView("terra"); }}
+              onMap={(d) => {
+                setFocus(d);
+                setView("terra");
+              }}
             />
           </div>
         )}
@@ -168,7 +197,10 @@ export default function App() {
             <TerraCheckPage
               focus={focus}
               lang={lang}
-              onDecodeParcel={(d) => { setFocus(d); setView("acte"); }}
+              onDecodeParcel={(d) => {
+                setFocus(d);
+                setView("acte");
+              }}
             />
           </div>
         )}
@@ -187,10 +219,3 @@ export default function App() {
     </div>
   );
 }
-useEffect(() => {
-  // Réveille l'instance Render dès le chargement de la page d'accueil
-  const backendUrl = import.meta.env.VITE_API_URL || "https://novissi-droit-ia.onrender.com";
-  fetch(`${backendUrl}/health`, { method: "GET" }).catch(() => {
-    // Erreur silencieuse normale si le serveur est en cours de démarrage
-  });
-}, []);
